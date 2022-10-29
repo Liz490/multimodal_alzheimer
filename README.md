@@ -19,11 +19,19 @@ Host adlm
 
 Connect to the AIMED VPN.
 Add your public key to authkeys on the server:
-```you@your_computer:~$ ssh-copy-id -i ~/.ssh/<YOUR_PUBLIC_KEY_FILE> adlm```
+```
+you@your_computer:~$ ssh-copy-id -i ~/.ssh/<YOUR_PUBLIC_KEY_FILE> adlm
+```
 
-Now you can login with ```ssh adlm``` if you are connected to the VPN and use the download script for tabular data.
+Now you can login with 
+```
+ssh adlm
+``` 
+if you are connected to the VPN and use the download script for tabular data.
 
 # Usage
 
 After setting up automatic ssh authentification you can download tabular data by running 
-`./download_tabular.sh`
+```
+./download_tabular.sh
+```

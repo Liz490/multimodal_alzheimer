@@ -6,4 +6,24 @@ Much research focuses on creating the best possible model with only one source o
 
 # Setup
 
+## Environment
 `conda env create -f environment.yml`
+
+## Automatic ssh authentification
+Add to your ssh config (~/.ssh/config):
+```
+Host adlm 
+  HostName 131.159.110.3 
+  User <YOUR_USERNAME>
+```
+
+Connect to the AIMED VPN.
+Add your public key to authkeys on the server:
+`you@your_computer:~$ ssh-copy-id -i ~/.ssh/<YOUR_PUBLIC_KEY_FILE> adlm`
+
+Now you can login with `ssh adlm` if you are connected to the VPN and use the download script for tabular data.
+
+# Usage
+
+After setting up automatic ssh authentification you can download tabular data by running 
+`./download_tabular.sh`

@@ -34,7 +34,7 @@ You can test the configuration with
 ```
 python -c "import sys; print(sys.path)"
 ```
-The output should contain the path above.
+The output should contain `/vol/chameleon/projects/adni/adni_1/`.
 You can then just use it like any normal module with
 ```
 from MedicalNet import ...

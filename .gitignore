@@ -1,4 +1,11 @@
 data/
+runs/
+figures/
+MedicalNet/
+
+# IDEs
+.idea/
+.vscode/
 
 # Python standard .gitignore
 # Byte-compiled / optimized / DLL files

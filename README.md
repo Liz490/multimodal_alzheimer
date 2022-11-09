@@ -69,3 +69,8 @@ After setting up automatic ssh authentification you can download tabular data by
 ```
 ./download_tabular.sh
 ```
+
+Run any (python-)scripts from the project root directory, otherwise you will get errors
+due to wrong path configuration.
+
+Make sure to delete cell outputs in jupyter notebooks before staging/committing.

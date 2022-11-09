@@ -7,9 +7,41 @@ Much research focuses on creating the best possible model with only one source o
 # Setup
 
 ## Environment
+Install the project environment with
 ```
 conda env create -f environment.yml
 ```
+afterwards you will be able to use it with
+```
+conda activate adni
+```
+
+If you install new stuff and want to commit code that requires it, update the environment with
+```
+conda env export -f environment.yml --no-builds
+```
+
+## MedicalNet
+A copy of MedicalNet including all pretrained models is stored in the shared project folder under
+`/vol/chameleon/projects/adni/adni_1/MedicalNet`. If you want to execute code depending on 
+MedicalNet add 
+```
+export PYTHONPATH="${PYTHONPATH}:/vol/chameleon/projects/adni/adni_1/"
+```
+to your `~/.bashrc` (or other shell configuration).
+Log out and log in again in order to make changes take effect.
+You can test the configuration with
+```
+python -c "import sys; print(sys.path)"
+```
+The output should contain the path above.
+You can then just use it like any normal module with
+```
+from MedicalNet import ...
+```
+
+**Important: Do not change code in the MedicalNet repository!** If you need to do stuff differently
+than them, create a new file in our repository and load the modules you need.
 
 ## Automatic ssh authentification for download script usage
 Add to your ssh config (~/.ssh/config):

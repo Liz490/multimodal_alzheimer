@@ -16,6 +16,8 @@ from torch.utils.tensorboard import SummaryWriter
 from early_stopping import EarlyStopping
 import os
 import argparse
+from datetime import datetime
+import pytz
 
 #PARSED ARGUMENTS
 parser1 = argparse.ArgumentParser()
@@ -197,7 +199,10 @@ checkpoint = {
     'best_confusion': best_confusion
 }
 
-torch.save(checkpoint, f'/vol/chameleon/projects/adni/adni_1/trained_models/pet1451_epoch{epochs_checkpoint + epoch}.pth')
+checkpoint_path = '/vol/chameleon/projects/adni/adni_1/trained_models/' \
+        + datetime.now(pytz.timezone('Europe/Berlin')).strftime('%Y-%m-%d_%H-%M-%S') \
+        + f'_pet1451_epoch{epochs_checkpoint + epoch}.pth'
+torch.save(checkpoint, checkpoint_path) 
 sys.exit()
 
 

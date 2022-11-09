@@ -7,9 +7,11 @@ Much research focuses on creating the best possible model with only one source o
 # Setup
 
 ## Environment
-```conda env create -f environment.yml```
+```
+conda env create -f environment.yml
+```
 
-## Automatic ssh authentification
+## Automatic ssh authentification for download script usage
 Add to your ssh config (~/.ssh/config):
 ```
 Host adlm 

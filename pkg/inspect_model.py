@@ -172,8 +172,7 @@ for epoch in range(args.epochs):
             # print(f'y {y}')
             val_loss += criterion(pred, y).item()
             conf_matrix += confusion_matrix(y.cpu().view(-1).numpy(), prediction.cpu().view(-1).numpy(), labels=[0,1,2])
-
-    conf_matrix[2,2] += epoch    
+  
 
     val_loss /= len(valloader)
     if val_loss < val_loss_last_epoch:
@@ -192,9 +191,6 @@ for epoch in range(args.epochs):
         best_epoch = epoch - patience + 1
         break
     
-    # print(model.state_dict['module.conv_seg.7.bias'])
-    # print('--------------------')
-    #print(best_state_dict.keys())
 if not stopped_early:
     best_epoch = args.epochs
 

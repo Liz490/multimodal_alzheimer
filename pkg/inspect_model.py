@@ -19,24 +19,27 @@ import argparse
 from datetime import datetime
 import pytz
 
+# set the random seed in the very beginning
+torch.manual_seed(5)
+
 #PARSED ARGUMENTS
 parser1 = argparse.ArgumentParser()
 
 parser1.add_argument("--resume_checkpoint", type=str, default='0', help="checkpoint name")
-parser1.add_argument("--device", type=str, default='0', help="gpu 0-7")
+#parser1.add_argument("--device", type=str, default='0', help="gpu 0-7")
 parser1.add_argument("--lr", type=float, default=1e-5, help="learning rate")
 parser1.add_argument("--epochs", type=int, default=30, help="number of epochs")
 
 
 args = parser1.parse_args()
+batch_size = 32
 
 
 
-# num_of_gpus = torch.cuda.device_count()
-# print(num_of_gpus)
-
-device = torch.device(f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu')
-
+# Assign device
+# Note: DON'T FORGET TO EXECUTE 'export CUDA_VISIBLE_DEVICES=<device_index>' IN THE TERMINAL
+#       THEN CUDA:0 WILL BE THAT DEVICE
+device = torch.device(f'cuda:0' if torch.cuda.is_available() else 'cpu')
 
 earlystop = EarlyStopping(patience=5)
 
@@ -45,33 +48,31 @@ earlystop = EarlyStopping(patience=5)
 # Initialize Model
 opts = parse_opts()
 opts.pretrain_path = '/vol/chameleon/projects/adni/adni_1/MedicalNet/pretrain/resnet_50_23dataset.pth'
-opts.gpu_id = [args.device]
+opts.gpu_id = [0]
 opts.input_W = 91
 opts.input_H = 91
 opts.input_D = 109
 model, parameters = generate_model(opts)
 
-######################
-# TODO: set random seed
-######################
 
+# TRANSFORMS
 transform = Compose([ToTensor(), Normalize(mean=0.5145, std=0.5383)])
-path = os.path.join(os.getcwd(), 'data/path_data_petav1451.csv')
 
 
-# DATASET, SPLIT AND DATALOADER
-dataset = PETAV1451Dataset(path=path, transform=transform, balanced=False)  
+# DATASET AND DATALOADER
+trainpath = os.path.join(os.getcwd(), 'data/train_path_data_petav1451.csv')
+valpath = os.path.join(os.getcwd(), 'data/val_path_data_petav1451.csv')
 
-n_samples_train = int(len(dataset)*0.85)
-n_samples_val = len(dataset) - n_samples_train 
-trainset, valset= random_split(dataset, [n_samples_train, n_samples_val])
-trainloader = DataLoader(trainset, batch_size=32, shuffle=True)
-valloader = DataLoader(valset, batch_size=32, shuffle=True)
+trainset = PETAV1451Dataset(path=trainpath, transform=transform, balanced=False)
+valset = PETAV1451Dataset(path=valpath, transform=transform, balanced=False)
+
+trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
+valloader = DataLoader(valset, batch_size=batch_size, shuffle=True)
 
 
 
 # Loss Function
-weight, weight_normalized = dataset.get_label_distribution()
+weight, weight_normalized = trainset.get_label_distribution()
 weight = weight.to(dtype=torch.float32).to(device)
 weight_normalized = weight_normalized.to(dtype=torch.float32).to(device)
 majority_class_freq = torch.max(weight)
@@ -109,10 +110,8 @@ for name, param in model.named_parameters():
     if not 'conv_seg' in name:
         param.requires_grad = False
 
-# print(torch.rand((4,1,91,109,91)).to(device).get_device())
-# #model(torch.rand((4,1,91,109,91)).cuda())
-# sys.exit()
 
+# Optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
 
@@ -132,9 +131,6 @@ for epoch in range(args.epochs):
         x = x.to(dtype=torch.float32)
         x = x.to(device)
         y = y.to(device)
-        # print(x.device)
-        # print(y.device)
-        # print(next(model.parameters()).device)
         optimizer.zero_grad()
         pred = model(x)
         
@@ -164,19 +160,8 @@ for epoch in range(args.epochs):
             prediction = torch.argmax(pred, 1)
             print(f'pred {prediction}')
             print(f'y {y}')
-            # print(y)
-            # print(prediction)
-            # print(pred)
-            # print(y)
-            # print(criterion(pred, y).item())
             val_loss += criterion(pred, y).item()
-            # print('-')
-            # print(y.cpu().view(-1).numpy())
-            # print('-')
-            # print(prediction.cpu().view(-1).numpy())
-            #correct += (pred.argmax(1) == y).type(torch.float).sum().item()
             conf_matrix += confusion_matrix(y.cpu().view(-1).numpy(), prediction.cpu().view(-1).numpy(), labels=[0,1,2])
-            # print(conf_matrix)
 
     
 

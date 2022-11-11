@@ -25,5 +25,7 @@ def split_tabular(path):
 
 
 if __name__ == "__main__":
-    F_TAB_ADNI_TAU = './data/ADNI_Tau_Amyloid_SUVR_amyloid_tau_status_dems.csv'
-    split_tabular(F_TAB_ADNI_TAU)
+    #F_TAB_ADNI_TAU = './data/ADNI_Tau_Amyloid_SUVR_amyloid_tau_status_dems.csv'
+    num_modalities_id = './data/num_image_modalities.csv'
+    split_tabular(num_modalities_id)
+    print('Dataset split performed!')

@@ -33,7 +33,7 @@ def train(lr=1e-5):
     #parser1.add_argument("--device", type=str, default='0', help="gpu 0-7")
     #parser1.add_argument("--lr", type=float, default=1, help="learning rate")
     parser1.add_argument("--epochs", type=int, default=20, help="number of epochs")
-
+    
 
     args = parser1.parse_args()
     batch_size = 32

@@ -21,6 +21,10 @@ import pytz
 from copy import deepcopy
 #from ignite.metrics.confusion_matrix import ConfusionMatrix
 from torchmetrics import JaccardIndex
+from sklearn.metrics import f1_score
+
+
+
 
 def train(lr=1e-5):
     # set the random seed in the very beginning
@@ -37,10 +41,10 @@ def train(lr=1e-5):
 
     args = parser1.parse_args()
     batch_size = 32
-    patience=3
+    patience=5
     
-
-
+    # tensorboard
+    writer = SummaryWriter(f'/vol/chameleon/projects/adni/adni_1/tensorboard/runs/testepochloss')
 
     # Assign device
     # Note: DON'T FORGET TO EXECUTE 'export CUDA_VISIBLE_DEVICES=<device_index>' IN THE TERMINAL
@@ -48,6 +52,7 @@ def train(lr=1e-5):
     device = torch.device(f'cuda:0' if torch.cuda.is_available() else 'cpu')
 
     earlystop = EarlyStopping(patience=patience)
+    stopped_early = False
 
     # mIoU metric for evaluation
     jaccard = JaccardIndex(num_classes=3).to(device)
@@ -89,8 +94,6 @@ def train(lr=1e-5):
     criterion = nn.CrossEntropyLoss()  # weight = 1 - weight_normalized
 
 
-    print(weight)
-
 
     # Add Layers to finetune the model
     # The model is wrapped in a nn.DataParallel object, therefore we cannot access
@@ -126,23 +129,34 @@ def train(lr=1e-5):
     # Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
+
+    # Initializations
     best_state_dict = deepcopy(model.state_dict())
     best_confusion = None
-
-    #best_epoch = 0
-
-    model = model.to(device) 
     running_loss = 0
-
     miou_last_epoch = 0
+    f1_last_epoch = 0
     val_loss_last_epoch = 300
+    
 
-    writer = SummaryWriter(f'/vol/chameleon/projects/adni/adni_1/tensorboard/runs/lr_{lr}')
-    stopped_early = False
+    # send model to device
+    model = model.to(device)
+
+
     for epoch in range(args.epochs):
-        #print(f'best epoch: {best_epoch}')
-        print(f'EPOCH {epochs_checkpoint + epoch + 1}')
+        print(f'EPOCH {epochs_checkpoint + epoch}')
+        #track loss and acc per epoch
+        loss_epoch = 0
+        acc_epoch = 0
+
+        # we cannot compute f1 and miou batchwise
+        targets_epoch = []
+        predictions_epoch = []
+        
+        # send model to train mode
         model.train()
+        
+        # iterate over train split
         for i, (x,y) in enumerate(trainloader):
             x = x.unsqueeze(1)
             x = x.to(dtype=torch.float32)
@@ -150,24 +164,45 @@ def train(lr=1e-5):
             y = y.to(device)
             optimizer.zero_grad()
             pred = model(x)
-            
+            prediction = torch.argmax(pred, 1)
+
+            # keep track of all predictions and targets that we have in one epoch
+            # we can't average over our accuracy measures
+            predictions_epoch.append(prediction)
+            targets_epoch.append(y)
+
             loss = criterion(pred, y)
             running_loss += loss.item()
+            loss_epoch += loss.item()
             loss.backward()
             optimizer.step()
+
             if i%10 == 0:
                 if i!=0:
                     print(f'Iteration {i}:    Train Loss {running_loss/10}')
-                    writer.add_scalar('training loss', running_loss/10, epoch*len(trainloader)+i)
-                    # writer.close()
                     running_loss = 0
+        writer.add_scalar('training loss', loss_epoch / len(trainloader), epoch)
+
+        # concatenate all prediction and target tensors into one big tensor
+        predictions_epoch = torch.cat(predictions_epoch)
+        predictions_epoch = predictions_epoch.cpu().numpy()
+        targets_epoch = torch.cat(targets_epoch)
+        targets_epoch = targets_epoch.cpu().numpy()
         
+        # compute F1 score
+        # 'macro' takes unweighted mean over all classes
+        f1_epoch = f1_score(targets_epoch, predictions_epoch, average='macro')
+        print(f'Training F1 score over complete epoch: {f1_epoch}')
+        writer.add_scalar('training accuracy', f1_epoch, epoch)
+
         print('VALIDATION')
 
         val_loss = 0
         model.eval()
         conf_matrix = np.zeros((3,3))
         with torch.no_grad():
+            targets_epoch_val = []
+            predictions_epoch_val = []
             for x, y in valloader:
                 x = x.unsqueeze(1)
                 x = x.to(dtype=torch.float32)
@@ -176,28 +211,43 @@ def train(lr=1e-5):
                 
                 pred = model(x)
                 prediction = torch.argmax(pred, 1)
-                # print(f'pred {prediction}')
-                # print(f'y {y}')
+
+                predictions_epoch_val.append(prediction)
+                targets_epoch_val.append(y)
+
                 val_loss += criterion(pred, y).item()
                 conf_matrix += confusion_matrix(y.cpu().view(-1).numpy(), prediction.cpu().view(-1).numpy(), labels=[0,1,2])
                 
                 miou = jaccard(prediction,y).item()
-
+        
+        # This only works if we take the validation batch size as all samples
         val_loss /= len(valloader)
-        if miou > miou_last_epoch:
+        writer.add_scalar('valdation loss', val_loss, epoch)
+        
+        predictions_epoch_val = torch.cat(predictions_epoch_val)
+        predictions_epoch_val = predictions_epoch_val.cpu().numpy()
+        targets_epoch_val = torch.cat(targets_epoch_val)
+        targets_epoch_val = targets_epoch_val.cpu().numpy()
+
+        f1_epoch_val = f1_score(targets_epoch_val, predictions_epoch_val, average='macro')
+        print(f'Validation F1 score over complete epoch: {f1_epoch_val}')
+        writer.add_scalar('validation accuracy', f1_epoch_val, epoch)
+        
+        writer.close()
+
+        if f1_epoch_val > f1_last_epoch:
             best_confusion = conf_matrix.copy()
-            
             best_state_dict = deepcopy(model.state_dict())
-            #best_epoch = epoch.copy()
+            
+            # relevant depending on the criteria for early stopping
             val_loss_last_epoch = val_loss
             miou_last_epoch = miou
-        #correct /= n_samples_test
-        writer.add_scalar('valdation loss', val_loss, epoch + i)
-        writer.close()
-        print(f"Avg loss: {val_loss:>8f} \n")
-        print(f"mIoU: {miou:>8f} \n")
+            f1_last_epoch = f1_epoch_val
         
-        if earlystop.early_stop(val_acc=miou):
+        print(f"Avg loss: {val_loss:>4f} \n")
+        
+        
+        if earlystop.early_stop(val_acc=f1_epoch_val):
             print('STOPPING EARLY')
             stopped_early = True
             best_epoch = epoch - patience + 1

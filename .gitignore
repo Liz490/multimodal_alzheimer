@@ -2,6 +2,7 @@ data/
 runs/
 figures/
 MedicalNet/
+lightning_logs/
 
 
 # IDEs

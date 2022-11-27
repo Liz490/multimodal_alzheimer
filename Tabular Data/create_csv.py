@@ -1,8 +1,6 @@
 import os
 import json
 import pandas as pd
-from datetime import datetime
-
 
 def writeTables():
     with open('../data_split_tabular.json', 'r') as f:

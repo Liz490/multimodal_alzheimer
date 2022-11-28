@@ -11,25 +11,22 @@ class Small_PET_CNN(pl.LightningModule):
         self.save_hyperparameters(hparams)
 
         self.model = nn.Sequential(
-                nn.Conv3d(1, 1, 5, padding='same'),
-                nn.ReLU(),
-                nn.Flatten(),
-                nn.Linear(1*91*91*109, 3)
-                # nn.AvgPool3d(2),
-                # nn.Conv3d(32, 32, 5, padding='same'),
-                # nn.ReLU(),
-                # nn.AvgPool3d(2),
-                # nn.Conv3d(32, 32, 5, padding='same'),
-                # nn.ReLU(),
-                # nn.AvgPool3d(2),
-                # nn.Flatten(),
-                # nn.
-                # maxpool
-                # globavg
-                # linear
+            nn.Conv3d(1, 16, 5, padding='same'),
+            nn.ReLU(),
+            nn.MaxPool3d(2),
+            nn.Conv3d(16, 32, 5, padding='same'),
+            nn.ReLU(),
+            nn.MaxPool3d(2),
+            nn.Conv3d(32, 128, 3, padding='same'),
+            nn.ReLU(),
+            nn.MaxPool3d(2),
+            nn.AdaptiveAvgPool3d(1),
+            nn.Flatten(),
+            nn.Linear(128, 3)
         )
-        
-        self.criterion = nn.CrossEntropyLoss(weight=hparams['loss_class_weights'])
+
+        self.criterion = nn.CrossEntropyLoss(
+            weight=hparams['loss_class_weights'])
         self.f1_score_train = MulticlassF1Score(num_classes=3, average='macro')
         self.f1_score_val = MulticlassF1Score(num_classes=3, average='macro')
 
@@ -75,7 +72,7 @@ class Small_PET_CNN(pl.LightningModule):
         elif mode == 'train':
             self.f1_score_train(y_hat, y)
         return loss
-   
+
     def training_step(self, batch, batch_idx):
         return self.general_step(batch, batch_idx, "train")
 
@@ -83,24 +80,25 @@ class Small_PET_CNN(pl.LightningModule):
         return self.general_step(batch, batch_idx, "val")
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters())
+        return torch.optim.Adam(self.model.parameters(), lr=self.hparams['lr'])
 
     def training_epoch_end(self, training_step_outputs):
-        avg_loss = torch.stack([x['loss'] for x in training_step_outputs]).mean()
+        avg_loss = torch.stack([x['loss']
+                               for x in training_step_outputs]).mean()
         f1_epoch = self.f1_score_train.compute()
         self.f1_score_train.reset()
-        
+
         self.log_dict({
             'train_loss_epoch': avg_loss,
             'train_f1_epoch': f1_epoch,
             'step': float(self.current_epoch)
         })
-            
+
     def validation_epoch_end(self, validation_step_outputs):
         avg_loss = torch.stack(validation_step_outputs).mean()
         f1_epoch = self.f1_score_val.compute()
         self.f1_score_val.reset()
-        
+
         self.log_dict({
             'val_loss_epoch': avg_loss,
             'val_f1_epoch': f1_epoch,

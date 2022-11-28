@@ -9,16 +9,9 @@ from pet_cnn import Small_PET_CNN
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
-if __name__ == '__main__':
-    pl.seed_everything(5, workers=True)
 
-    hparams = {
-        'batch_size': 32,
-        'early_stopping_patience': 5,
-        'max_epochs': 20,
-        'norm_mean': 0.5145,
-        'norm_std': 0.5383
-    }
+def train(hparams):
+    pl.seed_everything(5, workers=True)
 
     # TRANSFORMS
     transform = Compose([
@@ -30,12 +23,19 @@ if __name__ == '__main__':
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_petav1451.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_petav1451.csv')
 
-    trainset = PETAV1451Dataset(path=trainpath, transform=transform, balanced=False)
-    valset = PETAV1451Dataset(path=valpath, transform=transform, balanced=False)
+    trainset = PETAV1451Dataset(
+        path=trainpath, transform=transform, balanced=False)
+    valset = PETAV1451Dataset(
+        path=valpath, transform=transform, balanced=False)
 
-    trainloader = DataLoader(trainset, batch_size=hparams['batch_size'], shuffle=True, num_workers=32)
+    trainloader = DataLoader(
+        trainset,
+        batch_size=hparams['batch_size'],
+        shuffle=True,
+        num_workers=32
+    )
     valloader = DataLoader(valset, batch_size=len(valset), num_workers=32)
- 
+
     _, weight_normalized = trainset.get_label_distribution()
     hparams['loss_class_weights'] = 1 - weight_normalized
 
@@ -56,4 +56,19 @@ if __name__ == '__main__':
     trainer.fit(model, trainloader, valloader)
 
 
-        
+if __name__ == '__main__':
+    hparams = {
+        'early_stopping_patience': 5,
+        'max_epochs': 80,
+        'norm_mean': 0.5145,
+        'norm_std': 0.5383
+    }
+
+    # for lr in [1e-4, 1e-5, 1e-6]:
+    #    for bs in [8, 16, 32]:
+    #        hparams['lr'] = lr
+    #        hparams['batch_size'] = bs
+    #        train(hparams)
+    hparams['lr'] = 1e-4
+    hparams['batch_size'] = 8
+    train(hparams)

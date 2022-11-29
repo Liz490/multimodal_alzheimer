@@ -4,6 +4,7 @@ from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import os
 import numpy as np
+from torchvision.transforms import Normalize
 
 
 label_mapping = {'CN': 0, 'MCI': 1, 'Dementia': 2}
@@ -12,6 +13,9 @@ class PETAV1451Dataset(Dataset):
     def __init__(self, path, transform=None, balanced=False):
         self.transform = transform
         self.ds = pd.read_csv(path)
+        self.ds = self.ds.dropna(subset='path_pet1451')
+        self.ds.reset_index(drop=True, inplace=True)
+        
         if balanced:
             self.ds = self.balance_ds()
             self.ds = self.ds.reset_index()
@@ -21,7 +25,8 @@ class PETAV1451Dataset(Dataset):
         return len(self.ds)
 
     def __getitem__(self, index):
-        path_idx = self.ds.loc[index, 'path']
+        path_idx = self.ds.loc[index, 'path_pet1451']
+        
         im = nib.load(path_idx)
         data = im.get_fdata()
         if self.transform:
@@ -60,12 +65,78 @@ class PETAV1451Dataset(Dataset):
         
         return self.ds.loc[combined_idx]
 
+class AnatDataset(Dataset):
+    def __init__(self, path, transform=None, normalization=True):
+        self.transform = transform
+        self.ds = pd.read_csv(path)
+        # TODO: consider also dropping the values in case there is no mask available
+        self.ds = self.ds.dropna(subset='path_anat')
+        self.ds.reset_index(drop=True, inplace=True)
+        self.normalization = normalization
+        
+
+    def __len__(self):
+        return len(self.ds)
+
+    def __getitem__(self, index):
+        path_idx = self.ds.loc[index, 'path_anat']
+        path_mask = self.ds.loc[index, 'path_anat_mask']
+
+        # image
+        im = nib.load(path_idx)
+        data = im.get_fdata()
+        data = torch.tensor(data)
+        # print('min and max')
+        # print(data.min())
+        # print(data.max())
+        
+        # mask
+        mask = nib.load(path_mask)
+        binary_mask = mask.get_fdata()
+        binary_mask = torch.tensor(binary_mask)
+
+        # compute mean and variance wrt brain mask
+        # 1. set non-brain voxels to 0 
+        data_masked = data * binary_mask
+        
+        # 2. flatten the tensor and remove all zero entries
+        data_masked = data_masked.reshape(-1)
+        data_masked = data_masked[data_masked.nonzero()]
+        
+        # 3. compute mean and std
+        std_mask, mean_mask = torch.std_mean(data_masked)
+        # print(std)
+        # print(mean)
+
+
+
+        if self.transform:
+            data = self.transform(data)
+
+        if self.normalization:
+            normalization_mask = Normalize(mean=mean_mask, std=std_mask)
+            data = normalization_mask(data)
+
+
+        label = self.ds.loc[index, 'label']
+        label = label_mapping[label]
+        label = torch.tensor(label)
+        return data, label
+        
+
 if __name__ == "__main__":
-    path = os.path.join(os.getcwd(), 'data/path_data_petav1451.csv')
-    dataset = PETAV1451Dataset(path=path, balanced=True)
-    #print(len(dataset))
-    # x, y = dataset[3]
+    path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
+    dataset = AnatDataset(path=path)
+    # print(len(dataset))
+    x, y = dataset[3]
+    print(x.min())
+    print(x.max())
+    
     # print(x.shape)
     # print(y)
 
-    
+    dataset = AnatDataset(path=path, normalization=False)
+    # print(len(dataset))
+    x, y = dataset[3]
+    print(x.min())
+    print(x.max())

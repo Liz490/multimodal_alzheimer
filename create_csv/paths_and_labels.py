@@ -17,7 +17,7 @@ from torch import threshold
 #
 #######################################################################
 
-THRESHOLD_DAYS = 500
+THRESHOLD_DAYS = 150 #6 month
 
 # define helper functions
 
@@ -37,9 +37,13 @@ def find_closest_timestamp(date, df):
     # USERDATE2: Date record last updated
     # EXAMDATE: Examination Date
     df_date = df.copy()
-    df_date['USERDATE'] = df_date['USERDATE'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d'))
+
+    # remove NaN values in EXAMDATE column
+    df_date = df_date.dropna(subset='EXAMDATE')
+
+    df_date['EXAMDATE'] = df_date['EXAMDATE'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d'))
     # calculate the time difference as int
-    df_date['time_diff'] = (date - df_date['USERDATE'])
+    df_date['time_diff'] = (date - df_date['EXAMDATE'])
     df_date['time_diff'] = df_date['time_diff'].apply(lambda x: x.days)
     df_date['time_diff'] = df_date['time_diff'].astype(int)
     # we don't care about the sign just relative time distance
@@ -79,7 +83,7 @@ for mode in ['train', 'val', 'test']:
     list_ids = dict_split[mode]
 
     # init df that contains the paths to the image data 
-    data_paths = pd.DataFrame(columns=['ID', 'ses', 'path_pet1451', 'path_anat', 'label'])
+    data_paths = pd.DataFrame(columns=['ID', 'ses', 'path_pet1451', 'path_anat', 'path_anat_mask', 'label'])
     not_available_pet1451 = 0
     not_available_anat = 0
 
@@ -146,6 +150,9 @@ for mode in ['train', 'val', 'test']:
                     # we only want the MNI_2mm for training
                     relevant_files_anat = [s for s in files_anat if "reg_ants2_MNI_2mm" in s]
 
+                    # additionally we need  the path to the brain mask
+                    mask_path = os.path.join(path_ses, 'antsCorticalThickness/BrainExtractionMask_ants2_MNI_2mm.nii.gz')
+
                     if len(relevant_files_anat) == 1:
                         p = relevant_files_anat[0]
                         path_mni2mm = os.path.join(path_ses, p)
@@ -174,7 +181,7 @@ for mode in ['train', 'val', 'test']:
                             # extract diagnosis
                             label = get_diag(row_subject)
                             
-                            new_row = pd.Series({'ID': id, 'ses': session, 'path_anat': path_mni2mm, 'label': label})
+                            new_row = pd.Series({'ID': id, 'ses': session, 'path_anat': path_mni2mm, 'path_anat_mask': mask_path,'label': label})
                             # add the new row to the df that holds the paths
                             data_paths = pd.concat([data_paths, new_row.to_frame().T], ignore_index=True)
                         else:
@@ -186,7 +193,10 @@ for mode in ['train', 'val', 'test']:
 
     print(f'for {mode} split there are {not_available_pet1451} PET1451 and {not_available_anat} ANAT labels not available!')
     
-    path_save = os.path.join(os.getcwd(), f'data/{mode}_path_data_petav1451.csv')
-    print(data_paths.head(20))
-    sys.exit()
-    df_pet_av1451.to_csv(path_save)
+    path_save = os.path.join(os.getcwd(), f'data/{mode}_path_data_labels.csv')
+    # print(len(data_paths))
+    # print(len(data_paths.dropna(subset='path_anat')))
+    # print(len(data_paths.dropna(subset='path_pet1451')))
+    # print(data_paths.loc[3, 'path_anat_mask'])
+    # sys.exit()
+    data_paths.to_csv(path_save)

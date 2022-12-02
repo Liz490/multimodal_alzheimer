@@ -10,7 +10,7 @@ def train_decision_tree():
     X_train, y_train = data[0], data[1]
     X_test, y_test = data[2], data[3]
 
-    tree_model = DecisionTreeClassifier(criterion='gini', max_depth=5, random_state=1)
+    tree_model = DecisionTreeClassifier(criterion='gini', max_depth=260, random_state=1)
     clf = tree_model.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
 
@@ -20,16 +20,16 @@ def train_decision_tree():
 
 
 def get_data():
-    test_data = pd.read_csv('test_tabular_data.csv', sep=',', header=None).to_numpy()
-    train_data = pd.read_csv('train_tabular_data.csv', sep=',', header=None).to_numpy()
+    test_data = pd.read_csv('test_tabular_data_schaefer.csv', sep=',', header=None).to_numpy()
+    train_data = pd.read_csv('train_tabular_data_schaefer.csv', sep=',', header=None).to_numpy()
 
-    X_train = np.delete(train_data, [0,1,2,-1], 1)
+    X_train = np.delete(train_data, [0,1], 1)
     X_train = np.delete(X_train, (0), axis=0)
-    y_train = train_data[:,-1]
+    y_train = train_data[:,1]
     y_train = np.delete(y_train, (0), axis=0)
-    X_test = np.delete(test_data, [0,1,2,-1], 1)
+    X_test = np.delete(test_data, [0,1], 1)
     X_test = np.delete(X_test, (0), axis=0)
-    y_test = test_data[:,-1]
+    y_test = test_data[:,1]
     y_test = np.delete(y_test, (0), axis=0)
 
     cn_test = np.count_nonzero(y_test == 'CN')

@@ -1,0 +1,10 @@
+{
+    "cache_key": "eyJhcmd1bWVudHMiOlsiLS1sb2dkaXI9L3UvaG9tZS9laXNsbi9hZGxtX2FkbmkvbGlnaHRuaW5nX2xvZ3MiLCItLXBvcnQ9MTYwMDciXSwiY29uZmlndXJlX2t3YXJncyI6e30sIndvcmtpbmdfZGlyZWN0b3J5IjoiL3UvaG9tZS9laXNsbi9hZGxtX2FkbmkifQ==",
+    "db": "",
+    "logdir": "/u/home/eisln/adlm_adni/lightning_logs",
+    "path_prefix": "",
+    "pid": 848958,
+    "port": 16007,
+    "start_time": 1670074827,
+    "version": "2.10.1"
+}

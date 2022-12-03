@@ -6,7 +6,7 @@ from MedicalNet.models import resnet
 from MedicalNet.model import generate_model
 from MedicalNet.setting import parse_opts
 import sys
-from dataloader import PETAV1451Dataset
+from dataloader import PETAV1451Dataset, AnatDataset
 from torch.utils.data import DataLoader, random_split
 from sklearn.metrics import confusion_matrix
 import numpy as np
@@ -44,7 +44,7 @@ def train(lr=1e-5):
     patience=5
     
     # tensorboard
-    writer = SummaryWriter(f'/vol/chameleon/projects/adni/adni_1/tensorboard/runs/testepochloss')
+    writer = SummaryWriter(f'/vol/chameleon/projects/adni/adni_1/tensorboard/runs/testmri')
 
     # Assign device
     # Note: DON'T FORGET TO EXECUTE 'export CUDA_VISIBLE_DEVICES=<device_index>' IN THE TERMINAL
@@ -70,20 +70,22 @@ def train(lr=1e-5):
 
 
     # TRANSFORMS
-    transform = Compose([ToTensor(), Normalize(mean=0.5145, std=0.5383)])  # 
+    transform = None #Compose([ToTensor(), Normalize(mean=0.5145, std=0.5383)])  # 
 
 
     # DATASET AND DATALOADER
-    trainpath = os.path.join(os.getcwd(), 'data/train_path_data_petav1451.csv')
-    valpath = os.path.join(os.getcwd(), 'data/val_path_data_petav1451.csv')
+    trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
+    valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
-    trainset = PETAV1451Dataset(path=trainpath, transform=transform, balanced=False)
-    valset = PETAV1451Dataset(path=valpath, transform=transform, balanced=False)
+    trainset = AnatDataset(path=trainpath, transform=transform)
+    valset = AnatDataset(path=valpath, transform=transform)
 
     trainloader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
     valloader = DataLoader(valset, batch_size=len(valset), shuffle=True)
-
-
+    
+    print(len(trainset))
+    print(len(valset))
+    
 
     # Loss Function
     weight, weight_normalized = trainset.get_label_distribution()
@@ -91,19 +93,18 @@ def train(lr=1e-5):
     weight_normalized = weight_normalized.to(dtype=torch.float32).to(device)
     majority_class_freq = torch.max(weight)
     weight = majority_class_freq / weight
-    criterion = nn.CrossEntropyLoss()  # weight = 1 - weight_normalized
-
+    criterion = nn.CrossEntropyLoss(weight = 1 - weight_normalized)  # weight = 1 - weight_normalized
+    
 
 
     # Add Layers to finetune the model
     # The model is wrapped in a nn.DataParallel object, therefore we cannot access
     # model.conv_seg directly, but have to access it over model.module.conv_seg.
-    model.module.conv_seg = nn.Sequential(nn.Conv3d(2048, 500, (3, 3, 3), stride=(1, 1, 1), padding='same'),
-                                        nn.ReLU(),
-                                        nn.Conv3d(500, 1, (3, 3, 3), stride=(1, 1, 1), padding='same'),
-                                        nn.ReLU(),
+
+    # TODO try out batchnorm before first finetune layer
+    model.module.conv_seg = nn.Sequential(nn.AdaptiveAvgPool3d(1),
                                         nn.Flatten(),
-                                        nn.Linear(12*14*12, 100),
+                                        nn.Linear(2048, 100),
                                         nn.ReLU(),
                                         nn.Linear(100,3))
 
@@ -267,7 +268,7 @@ def train(lr=1e-5):
             + f'_pet1451_epoch{epochs_checkpoint + best_epoch}.pth'
     torch.save(checkpoint, checkpoint_path) 
 
-train(lr=1e-5)
+train(lr=1e-4)
 sys.exit()
 
 

@@ -8,6 +8,7 @@ from torchvision.transforms import Normalize
 
 
 label_mapping = {'CN': 0, 'MCI': 1, 'Dementia': 2}
+label_mapping_mri = {'CN': 0, 'MCI': 1, 'AD': 2}
 
 class PETAV1451Dataset(Dataset):
     def __init__(self, path, transform=None, balanced=False):
@@ -43,6 +44,7 @@ class PETAV1451Dataset(Dataset):
     def get_label_distribution(self):
         counts_normalized = self.ds['label'].value_counts(normalize=True)
         counts = self.ds['label'].value_counts()
+        
         return torch.tensor(counts), torch.tensor(counts_normalized)
 
     def balance_ds(self):
@@ -105,8 +107,10 @@ class AnatDataset(Dataset):
         
         # 3. compute mean and std
         std_mask, mean_mask = torch.std_mean(data_masked)
-        # print(std)
-        # print(mean)
+        print('std:')
+        print(std_mask.item())
+        print('mean:')
+        print(mean_mask.item())
 
 
 
@@ -119,9 +123,17 @@ class AnatDataset(Dataset):
 
 
         label = self.ds.loc[index, 'label']
-        label = label_mapping[label]
+        label = label_mapping_mri[label]
         label = torch.tensor(label)
         return data, label
+    
+    def get_label_distribution(self):
+        counts_normalized = self.ds['label'].value_counts(normalize=True)
+        counts_normalized = counts_normalized.reindex(index = ['CN','MCI','AD'])
+        counts = self.ds['label'].value_counts()
+        counts = counts.reindex(index = ['CN','MCI','AD'])
+        
+        return torch.tensor(counts), torch.tensor(counts_normalized)
         
 
 if __name__ == "__main__":
@@ -129,6 +141,7 @@ if __name__ == "__main__":
     dataset = AnatDataset(path=path)
     # print(len(dataset))
     x, y = dataset[3]
+    print('min and max after normalization:')
     print(x.min())
     print(x.max())
     
@@ -138,5 +151,6 @@ if __name__ == "__main__":
     dataset = AnatDataset(path=path, normalization=False)
     # print(len(dataset))
     x, y = dataset[3]
+    print('min and max without normalization:')
     print(x.min())
     print(x.max())

@@ -20,8 +20,8 @@ def train_decision_tree():
 
 
 def get_data():
-    val_data = pd.read_csv('val_tabular_data.csv', sep=',', header=None).to_numpy()
-    train_data = pd.read_csv('train_tabular_data.csv', sep=',', header=None).to_numpy()
+    val_data = pd.read_csv('val_tabular_data_bio.csv', sep=',', header=None).to_numpy()
+    train_data = pd.read_csv('train_tabular_data_bio.csv', sep=',', header=None).to_numpy()
 
     X_train = np.delete(train_data, [0,1,2,-1], 1)
     X_train = np.delete(X_train, (0), axis=0)

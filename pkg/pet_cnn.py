@@ -66,9 +66,7 @@ class Small_PET_CNN(pl.LightningModule):
         Inputs:
         - x: PyTorch input Variable
         """
-        x = self.model(x)
-
-        return x
+        return self.model(x)
 
     @property
     def is_cuda(self):

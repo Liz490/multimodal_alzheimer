@@ -15,7 +15,7 @@ class PETAV1451Dataset(Dataset):
         if balanced:
             self.ds = self.balance_ds()
             self.ds = self.ds.reset_index()
-            
+
 
     def __len__(self):
         return len(self.ds)
@@ -38,6 +38,9 @@ class PETAV1451Dataset(Dataset):
     def get_label_distribution(self):
         counts_normalized = self.ds['label'].value_counts(normalize=True)
         counts = self.ds['label'].value_counts()
+        counts_normalized = counts_normalized.reindex(
+            index=['CN', 'MCI', 'Dementia'])
+        counts = counts.reindex(index=['CN', 'MCI', 'Dementia'])
         return torch.tensor(counts), torch.tensor(counts_normalized)
 
     def balance_ds(self):
@@ -50,14 +53,14 @@ class PETAV1451Dataset(Dataset):
         df_mci = self.ds.loc[filt_mci]
         df_mci = df_mci.sample(n=num_samples, random_state=1)
         mci_idx = df_mci.index
-       
+
         filt_cn = self.ds['label'] == 'CN'
         df_cn = self.ds.loc[filt_cn]
         df_cn = df_cn.sample(n=num_samples, random_state=1)
         cn_idx = df_cn.index
 
         combined_idx = ad_idx.union(mci_idx).union(cn_idx)
-        
+
         return self.ds.loc[combined_idx]
 
 if __name__ == "__main__":

@@ -157,35 +157,35 @@ for mode in ['train', 'val', 'test']:
                         p = relevant_files_anat[0]
                         path_mni2mm = os.path.join(path_ses, p)
 
-                    # OBTAIN CORRESPONDING LABEL    
-                    # get a timedelta representation of the string
-                    session_timedelta = get_timedelta_from_string(session)
+                        # OBTAIN CORRESPONDING LABEL    
+                        # get a timedelta representation of the string
+                        session_timedelta = get_timedelta_from_string(session)
 
-                    #convert id string to integer
-                    rid = get_rid_from_id(id)
+                        #convert id string to integer
+                        rid = get_rid_from_id(id)
 
-                    # df that holds all the subject related information
-                    df_subject = diagnosis_dxsum.loc[diagnosis_dxsum['RID'] == rid]
-                    
-                    # check if rid from data_bids_processed has an entry in the diagnosis dataframe
-                    if df_subject.empty:
-                        not_available_anat += 1
-                    else:
-
-                        # get the number of days and the row for the closest available diagnosis
-                        days, index_subject = find_closest_timestamp(date=session_timedelta, df=df_subject)
+                        # df that holds all the subject related information
+                        df_subject = diagnosis_dxsum.loc[diagnosis_dxsum['RID'] == rid]
                         
-                        if days < THRESHOLD_DAYS:
-                            # extract data for relevant row
-                            row_subject = df_subject.loc[index_subject]
-                            # extract diagnosis
-                            label = get_diag(row_subject)
-                            
-                            new_row = pd.Series({'ID': id, 'ses': session, 'path_anat': path_mni2mm, 'path_anat_mask': mask_path,'label': label})
-                            # add the new row to the df that holds the paths
-                            data_paths = pd.concat([data_paths, new_row.to_frame().T], ignore_index=True)
-                        else:
+                        # check if rid from data_bids_processed has an entry in the diagnosis dataframe
+                        if df_subject.empty:
                             not_available_anat += 1
+                        else:
+
+                            # get the number of days and the row for the closest available diagnosis
+                            days, index_subject = find_closest_timestamp(date=session_timedelta, df=df_subject)
+                            
+                            if days < THRESHOLD_DAYS:
+                                # extract data for relevant row
+                                row_subject = df_subject.loc[index_subject]
+                                # extract diagnosis
+                                label = get_diag(row_subject)
+                                
+                                new_row = pd.Series({'ID': id, 'ses': session, 'path_anat': path_mni2mm, 'path_anat_mask': mask_path,'label': label})
+                                # add the new row to the df that holds the paths
+                                data_paths = pd.concat([data_paths, new_row.to_frame().T], ignore_index=True)
+                            else:
+                                not_available_anat += 1
 
                         
                         

@@ -3,27 +3,64 @@ import torch.nn as nn
 import pytorch_lightning as pl
 from torchmetrics.classification import MulticlassF1Score, MulticlassConfusionMatrix
 
-
-class Small_PET_CNN(pl.LightningModule):
+from MedicalNet.models import resnet
+from MedicalNet.model import generate_model
+from MedicalNet.setting import parse_opts
+import sys
+class Anat_CNN(pl.LightningModule):
 
     def __init__(self, hparams):
         super().__init__()
         self.save_hyperparameters(hparams)
 
-        self.model = nn.Sequential(
-            nn.Conv3d(1, 16, 5, padding='same'),
-            nn.ReLU(),
-            nn.MaxPool3d(2),
-            nn.Conv3d(16, 32, 5, padding='same'),
-            nn.ReLU(),
-            nn.MaxPool3d(2),
-            nn.Conv3d(32, 128, 3, padding='same'),
-            nn.ReLU(),
-            nn.MaxPool3d(2),
-            nn.AdaptiveAvgPool3d(1),
-            nn.Flatten(),
-            nn.Linear(128, 3)
-        )
+        # Initialize Model
+        opts = parse_opts()
+        opts.pretrain_path = '/vol/chameleon/projects/adni/adni_1/MedicalNet/pretrain/resnet_50_23dataset.pth'
+        opts.gpu_id = [0]
+        opts.input_W = 91
+        opts.input_H = 91
+        opts.input_D = 109
+        
+        resnet, _ = generate_model(opts)
+        self.model = resnet.module
+        
+        self.model.conv_seg = nn.Sequential(nn.AdaptiveAvgPool3d(1),
+                                        nn.Flatten(),
+                                        nn.Linear(2048, 100),
+                                        nn.ReLU(),
+                                        nn.Linear(100,3))
+
+        # Only optimize weights in the last few layers
+        for name, param in self.model.named_parameters():
+            if not 'conv_seg' in name:
+                param.requires_grad = False
+
+
+        
+        #for n, l in resnet.module.named_modules:
+        # print(self.model)
+        # sys.exit()
+        # print(self.model.__dict__)
+        # print('=======================================================')
+        # print('=======================================================')
+        # print('=======================================================')
+        # self.model = nn.Sequential(
+        #     nn.Conv3d(1, 16, 5, padding='same'),
+        #     nn.ReLU()
+            # nn.MaxPool3d(2),
+            # nn.Conv3d(16, 32, 5, padding='same'),
+            # nn.ReLU(),
+            # nn.MaxPool3d(2),
+            # nn.Conv3d(32, 128, 3, padding='same'),
+            # nn.ReLU(),
+            # nn.MaxPool3d(2),
+            # nn.AdaptiveAvgPool3d(1),
+            # nn.Flatten(),
+            # nn.Linear(128, 3)
+        # )
+        # print(self.model.__dict__)
+        # print(self.model.__dict__)
+
 
         self.criterion = nn.CrossEntropyLoss(
             weight=hparams['loss_class_weights'])

@@ -1,4 +1,4 @@
-from dataloader import PETAV1451Dataset
+from dataloader import PETAV1451Dataset, AnatDataset
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
 import os
@@ -6,8 +6,12 @@ import torch
 
 transform = Compose([ToTensor()])
 path = os.path.join(os.getcwd(), 'data/path_data_petav1451.csv')
-dataset = PETAV1451Dataset(path=path, transform=transform, balanced=False)  
+#dataset = PETAV1451Dataset(path=path, transform=transform, balanced=False)  
 
+path_anat_train = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
+path_anat_val = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
+# MAKE SURE TO DISTINGUISH BETWEEN TRAIN, VAL AND TEST
+dataset = AnatDataset(path=path_anat_val, transform=None)
 
 class NormalizeDataset():
     def __init__(self):

@@ -19,6 +19,8 @@ def train_decision_tree():
     print("Accuracy:", metrics.accuracy_score(y_val, y_pred))
 
 
+#0= CN, 1 = Ad, 2 = MCI
+
 def get_data():
     val_data = pd.read_csv('val_tabular_data_schaefer.csv', sep=',', header=None).to_numpy()
     train_data = pd.read_csv('train_tabular_data_schaefer.csv', sep=',', header=None).to_numpy()

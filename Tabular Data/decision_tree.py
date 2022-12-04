@@ -18,7 +18,6 @@ def train_decision_tree():
     plt.show()
     print("Accuracy:", metrics.accuracy_score(y_val, y_pred))
 
-
 def get_data():
     val_data = pd.read_csv('val_tabular_data.csv', sep=',', header=None).to_numpy()
     train_data = pd.read_csv('train_tabular_data.csv', sep=',', header=None).to_numpy()
@@ -36,9 +35,12 @@ def get_data():
     mci_val = np.count_nonzero(y_val == 'MCI')
     ad_val = np.count_nonzero(y_val == 'Dementia')
 
+
     cn_train = np.count_nonzero(y_train == 'CN')
     mci_train = np.count_nonzero(y_train == 'MCI')
     ad_train = np.count_nonzero(y_train == 'Dementia')
+
+    print(mci_val, mci_train)
 
     total_train = y_train.shape[0]
     total_val = y_val.shape[0]
@@ -70,7 +72,6 @@ def encode_labels(y_train, y_val):
     y_val = le.transform(y_val)
     y_train = le.transform(y_train)
     return y_val, y_train
-
 
 if __name__ == "__main__":
     train_decision_tree()

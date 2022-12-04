@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from sklearn import metrics
@@ -10,16 +11,18 @@ def train_decision_tree():
     X_train, y_train = data[0], data[1]
     X_val, y_val = data[2], data[3]
 
-    tree_model = DecisionTreeClassifier(criterion='gini', max_depth=5, random_state=1)
+    tree_model = DecisionTreeClassifier(criterion='gini', max_depth=5, random_state=1, class_weight='balanced')
     clf = tree_model.fit(X_train, y_train)
     y_pred = clf.predict(X_val)
 
+    print(f"F1 score: {metrics.f1_score(y_val, y_pred)}")
     disp = metrics.ConfusionMatrixDisplay.from_predictions(y_val, y_pred)
-    plt.show()
+    plt.show(cmap = plt.cm.get_cmap('Blues'))
+
     print("Accuracy:", metrics.accuracy_score(y_val, y_pred))
 
-
 def get_data():
+    print(os.getcwd())
     val_data = pd.read_csv('val_tabular_data_bio.csv', sep=',', header=None).to_numpy()
     train_data = pd.read_csv('train_tabular_data_bio.csv', sep=',', header=None).to_numpy()
 

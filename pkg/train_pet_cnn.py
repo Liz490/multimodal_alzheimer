@@ -3,9 +3,7 @@ import torch
 from dataloader import PETAV1451Dataset
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
-from sklearn.metrics import f1_score
-from pet_cnn import Small_PET_CNN
-# from pytorch_lightning.loggers import TensorBoardLogger
+from pet_cnn import Small_PET_CNN, Random_Benchmark_All_CN
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
@@ -39,6 +37,7 @@ def train(hparams):
     _, weight_normalized = trainset.get_label_distribution()
     hparams['loss_class_weights'] = 1 - weight_normalized
 
+    # model = Random_Benchmark(hparams=hparams)
     model = Small_PET_CNN(hparams=hparams)
 
     trainer = pl.Trainer(

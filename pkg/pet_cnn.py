@@ -194,3 +194,10 @@ class Small_PET_CNN(pl.LightningModule):
         with Image.open(buf) as im:
             return torchvision.transforms.ToTensor()(im)
 
+
+class Random_Benchmark_All_CN(Small_PET_CNN):
+    def forward(self, x):
+        y_hat = torch.zeros_like(super().forward(x))
+        y_hat[..., 0] = 1
+        y_hat[..., 1:] = 0
+        return y_hat

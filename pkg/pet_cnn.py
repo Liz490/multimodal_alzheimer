@@ -32,20 +32,37 @@ class Small_PET_CNN(pl.LightningModule):
         self.n_classes = 3
         self._label_ind_by_names = {'CN': 0, 'MCI': 1, 'AD': 2}
 
-        self.model = nn.Sequential(
-            nn.Conv3d(1, 16, 5, padding='same'),
-            nn.ReLU(),
-            nn.MaxPool3d(2),
-            nn.Conv3d(16, 32, 5, padding='same'),
-            nn.ReLU(),
-            nn.MaxPool3d(2),
-            nn.Conv3d(32, 128, 3, padding='same'),
-            nn.ReLU(),
-            nn.MaxPool3d(2),
-            nn.AdaptiveAvgPool3d(1),
-            nn.Flatten(),
-            nn.Linear(128, 3)
-        )
+        modules = nn.ModuleList()
+
+        # Convolutional Block
+        # n * (Conv, [Batchnorm], Activation, [Dropout], MaxPool)
+        n_in = 1
+        for n_out, filter_size in zip(self.hparams["conv_out"],
+                                      self.hparams["filter_size"]):
+            modules.append(nn.Conv3d(n_in, n_out, filter_size, padding="same"))
+            if "batchnorm" in self.hparams and self.hparams["batchnorm"]:
+                modules.append(nn.BatchNorm3d(n_out))
+            modules.append(nn.ReLU())
+            modules.append(nn.MaxPool3d(2))
+            if "dropout_conv_p" in self.hparams:
+                modules.append(nn.Dropout(p=self.hparams["dropout_conv_p"]))
+            n_in = n_out
+
+        # Connector Block
+        modules.append(nn.AdaptiveAvgPool3d(1))
+        modules.append(nn.Flatten())
+
+        # Dense Block
+        # n * ([Dropout], Linear)
+        if "linear_out" in self.hparams and self.hparams["linear_out"]:
+            n_out = self.hparams["linear_out"]
+            if "dropout_dense_p" in self.hparams:
+                modules.append(
+                    nn.Dropout(p=self.hparams["dropout_dense_p"]))
+            modules.append(nn.Linear(n_in, n_out))
+        modules.append(nn.Linear(n_out, self.n_classes))
+
+        self.model = nn.Sequential(*modules)
 
         self.criterion = nn.CrossEntropyLoss(
             weight=hparams['loss_class_weights'])

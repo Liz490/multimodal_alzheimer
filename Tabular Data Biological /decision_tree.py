@@ -11,13 +11,13 @@ def train_decision_tree():
     X_train, y_train = data[0], data[1]
     X_val, y_val = data[2], data[3]
 
-    tree_model = DecisionTreeClassifier(criterion='gini', max_depth=5, random_state=1, class_weight='balanced')
+    tree_model = DecisionTreeClassifier(criterion='gini', max_depth=5, random_state=1)
     clf = tree_model.fit(X_train, y_train)
     y_pred = clf.predict(X_val)
 
     print(f"F1 score: {metrics.f1_score(y_val, y_pred)}")
-    disp = metrics.ConfusionMatrixDisplay.from_predictions(y_val, y_pred)
-    plt.show(cmap = plt.cm.get_cmap('Blues'))
+    disp = metrics.ConfusionMatrixDisplay.from_predictions(y_val, y_pred, cmap= 'Blues', colorbar=False, display_labels=('NC', 'AD'))
+    plt.show()
 
     print("Accuracy:", metrics.accuracy_score(y_val, y_pred))
 

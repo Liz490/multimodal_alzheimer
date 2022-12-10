@@ -20,6 +20,19 @@ def train_decision_tree():
     plt.show()
 
     print("Accuracy:", metrics.accuracy_score(y_val, y_pred))
+    return clf
+
+def predict_MCI(model):
+    mci_data = pd.read_csv('val_MCI_extracted_data_bio.csv', sep=',', header=None).to_numpy()
+    X_mci = np.delete(mci_data, [0, 1, 2, -1], 1)
+    X_mci = np.delete(X_mci, (0), axis=0)
+
+    y_predict = model.predict(X_mci)
+
+    ad = np.sum(np.where(y_predict == 1 , 1, 0))
+    cn = np.sum(np.where(y_predict == 0 , 1, 0))
+    print(f'Share of MCI samples predicted AD: {ad/(ad+cn)}.\nShare of MCI samples predicted CN: {cn/(ad+cn)} ')
+
 
 def get_data():
     print(os.getcwd())
@@ -76,4 +89,8 @@ def encode_labels(y_train, y_val):
 
 
 if __name__ == "__main__":
-    train_decision_tree()
+    #train_decision_tree()
+    model = train_decision_tree()
+    predict_MCI(model)
+
+

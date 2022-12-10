@@ -32,6 +32,8 @@ def split_tabular():
     with open('../data_split_tabular_bio.json', 'w') as f:
         json.dump(split, f)
 
+
 if __name__ == "__main__":
     split_tabular()
+
     print('Dataset split performed!')

@@ -1,3 +1,4 @@
+from matplotlib.pyplot import axis
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
@@ -7,12 +8,15 @@ from MedicalNet.models import resnet
 from MedicalNet.model import generate_model
 from MedicalNet.setting import parse_opts
 import sys
+
+from focalloss import FocalLoss
+
 class Anat_CNN(pl.LightningModule):
 
     def __init__(self, hparams):
         super().__init__()
         self.save_hyperparameters(hparams)
-
+        
         # Initialize Model
         opts = parse_opts()
         opts.pretrain_path = '/vol/chameleon/projects/adni/adni_1/MedicalNet/pretrain/resnet_50_23dataset.pth'
@@ -24,7 +28,22 @@ class Anat_CNN(pl.LightningModule):
         resnet, _ = generate_model(opts)
         self.model = resnet.module
         
-        self.model.conv_seg = nn.Sequential(nn.AdaptiveAvgPool3d(1),
+        self.model.conv_seg = nn.Sequential(
+        # nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
+        #                                 nn.ReLU(),
+        #                                 nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
+        #                                 nn.ReLU(),
+        #                                 nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
+        #                                 nn.ReLU(),
+        #                                 nn.MaxPool3d(2),
+        #                                 nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
+        #                                 nn.ReLU(),
+        #                                 nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
+        #                                 nn.ReLU(),
+        #                                 nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
+        #                                 nn.ReLU(),
+                                        nn.BatchNorm3d(2048),
+                                        nn.AdaptiveAvgPool3d(1),
                                         nn.Flatten(),
                                         nn.Linear(2048, 100),
                                         nn.ReLU(),
@@ -64,6 +83,10 @@ class Anat_CNN(pl.LightningModule):
 
         self.criterion = nn.CrossEntropyLoss(
             weight=hparams['loss_class_weights'])
+
+        #self.criterion = FocalLoss(gamma=25)
+            
+
         self.f1_score_train = MulticlassF1Score(num_classes=3, average='macro')
         self.f1_score_val = MulticlassF1Score(num_classes=3, average='macro')
 
@@ -102,8 +125,13 @@ class Anat_CNN(pl.LightningModule):
         x = x.unsqueeze(1)
         x = x.to(dtype=torch.float32)
         y_hat = self.forward(x).to(dtype=torch.double)
+        if mode == 'train':
+            # print(f'pred {torch.argmax(y_hat, dim=1)}, gt {y}')
+            sftmx = nn.Softmax(dim=1)
+            # y_hat_sftmx = sftmx(y_hat)
+            # print(f'pred prob {torch.max(y_hat_sftmx, dim=1)}')
         loss = self.criterion(y_hat, y)
-        self.log(mode + '_loss', loss, on_step=True)
+        self.log(mode + '_loss', loss, on_step=True, prog_bar=True)
         if mode == 'val':
             self.f1_score_val(y_hat, y)
         elif mode == 'train':
@@ -111,6 +139,8 @@ class Anat_CNN(pl.LightningModule):
         return loss
 
     def training_step(self, batch, batch_idx):
+        #pbar = {'train_loss': self.general_step(batch, batch_idx, "train")}
+        #return {'loss': self.general_step(batch, batch_idx, "train"), 'progress_bar': pbar}
         return self.general_step(batch, batch_idx, "train")
 
     def validation_step(self, batch, batch_idx):

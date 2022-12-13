@@ -6,12 +6,16 @@ import os
 import numpy as np
 
 
-label_mapping = {'CN': 0, 'MCI': 1, 'Dementia': 2}
-
 class PETAV1451Dataset(Dataset):
-    def __init__(self, path, transform=None, balanced=False):
+    def __init__(self, path, transform=None, balanced=False, remove_mci=False):
+        self.label_mapping = {'CN': 0, 'MCI': 1, 'Dementia': 2}
+        self.remove_mci_state = remove_mci
         self.transform = transform
         self.ds = pd.read_csv(path)
+        if remove_mci:
+            self.label_mapping = {'CN': 0, 'Dementia': 1}
+            self.remove_mci()
+            self.ds = self.ds.reset_index()
         if balanced:
             self.ds = self.balance_ds()
             self.ds = self.ds.reset_index()
@@ -29,7 +33,7 @@ class PETAV1451Dataset(Dataset):
 
 
         label = self.ds.loc[index, 'label']
-        label = label_mapping[label]
+        label = self.label_mapping[label]
         label = torch.tensor(label)
         return data, label
         #return super().__getitem__(index)
@@ -38,9 +42,14 @@ class PETAV1451Dataset(Dataset):
     def get_label_distribution(self):
         counts_normalized = self.ds['label'].value_counts(normalize=True)
         counts = self.ds['label'].value_counts()
-        counts_normalized = counts_normalized.reindex(
-            index=['CN', 'MCI', 'Dementia'])
-        counts = counts.reindex(index=['CN', 'MCI', 'Dementia'])
+        if not self.remove_mci_state:
+            counts_normalized = counts_normalized.reindex(
+                index=['CN', 'MCI', 'Dementia'])
+            counts = counts.reindex(index=['CN', 'MCI', 'Dementia'])
+        else:
+            counts_normalized = counts_normalized.reindex(
+                index=['CN', 'Dementia'])
+            counts = counts.reindex(index=['CN', 'Dementia'])
         return torch.tensor(counts), torch.tensor(counts_normalized)
 
     def balance_ds(self):
@@ -62,6 +71,9 @@ class PETAV1451Dataset(Dataset):
         combined_idx = ad_idx.union(mci_idx).union(cn_idx)
 
         return self.ds.loc[combined_idx]
+
+    def remove_mci(self):
+        self.ds = self.ds.loc[self.ds['label'] != 'MCI']
 
 if __name__ == "__main__":
     path = os.path.join(os.getcwd(), 'data/path_data_petav1451.csv')

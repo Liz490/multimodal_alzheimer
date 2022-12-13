@@ -12,7 +12,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import Callback
 
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'optuna_just_sampling_2'
+EXPERIMENT_NAME = 'optuna_two_class'
 EXPERIMENT_VERSION = None
 
 
@@ -74,7 +74,8 @@ def optuna_just_sampling(trial):
         'early_stopping_patience': 5,
         'max_epochs': 20,
         'norm_mean': 0.5145,
-        'norm_std': 0.5383
+        'norm_std': 0.5383,
+        'n_classes': 2
     }
     hparams['lr'] = trial.suggest_float(
         'learning_rate', lr_min, lr_max, log=True)
@@ -129,10 +130,15 @@ def train(hparams,
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_petav1451.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_petav1451.csv')
 
-    trainset = PETAV1451Dataset(
-        path=trainpath, transform=transform, balanced=False)
-    valset = PETAV1451Dataset(
-        path=valpath, transform=transform, balanced=False)
+    remove_mci = hparams["n_classes"] == 2
+    trainset = PETAV1451Dataset(path=trainpath,
+                                transform=transform,
+                                balanced=False,
+                                remove_mci=remove_mci)
+    valset = PETAV1451Dataset(path=valpath,
+                              transform=transform,
+                              balanced=False,
+                              remove_mci=remove_mci)
 
     trainloader = DataLoader(
         trainset,
@@ -169,7 +175,7 @@ def train(hparams,
                 mode='min',
                 patience=hparams['early_stopping_patience']),
             mt_cb
-            ]
+        ]
     )
 
     trainer.fit(model, trainloader, valloader)
@@ -178,27 +184,28 @@ def train(hparams,
 
 def optuna_optimization():
     study = optuna.create_study(direction="minimize")
-    study.optimize(optuna_just_sampling, n_trials=200, timeout=86400)
+    study.optimize(optuna_just_sampling, n_trials=300, timeout=86400)
 
 
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    # optuna_optimization()
+    optuna_optimization()
     #####################
-    hparams = {
-        'early_stopping_patience': 5,
-        'max_epochs': 20,
-        'norm_mean': 0.5145,
-        'norm_std': 0.5383
-    }
+    # hparams = {
+    #     'early_stopping_patience': 5,
+    #     'max_epochs': 20,
+    #     'norm_mean': 0.5145,
+    #     'norm_std': 0.5383
+    # }
 
-    hparams['lr'] = 0.00006
-    hparams['batch_size'] = 8
-    hparams['conv_out'] = [8, 16, 32, 64]
-    hparams['filter_size'] = [5, 5, 5, 3] # More filters for more layers!
-    hparams['batchnorm'] = True
-    # hparams['dropout_conv_p'] = 0.1
-    # hparams['dropout_dense_p'] = 0.5
-    hparams['linear_out'] = 64
-    train(hparams, experiment_name='', experiment_version=None)
+    # hparams['lr'] = 0.00006
+    # hparams['batch_size'] = 8
+    # hparams['conv_out'] = [8, 16, 32, 64]
+    # hparams['filter_size'] = [5, 5, 5, 3]  # More filters for more layers!
+    # hparams['batchnorm'] = True
+    # # hparams['dropout_conv_p'] = 0.1
+    # # hparams['dropout_dense_p'] = 0.5
+    # hparams['linear_out'] = 64
+    # hparams["n_classes"] = 2
+    # train(hparams, experiment_name='two_class_1', experiment_version=None)

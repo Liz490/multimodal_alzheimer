@@ -29,8 +29,10 @@ class Small_PET_CNN(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
         self.save_hyperparameters(hparams)
-        self.n_classes = 3
-        self._label_ind_by_names = {'CN': 0, 'MCI': 1, 'AD': 2}
+        if hparams["n_classes"] == 3:
+            self.label_ind_by_names = {'CN': 0, 'MCI': 1, 'AD': 2}
+        else:
+            self.label_ind_by_names = {'CN': 0, 'AD': 1}
 
         modules = nn.ModuleList()
 
@@ -60,20 +62,20 @@ class Small_PET_CNN(pl.LightningModule):
                 modules.append(
                     nn.Dropout(p=self.hparams["dropout_dense_p"]))
             modules.append(nn.Linear(n_in, n_out))
-        modules.append(nn.Linear(n_out, self.n_classes))
+        modules.append(nn.Linear(n_out, self.hparams["n_classes"]))
 
         self.model = nn.Sequential(*modules)
 
         self.criterion = nn.CrossEntropyLoss(
             weight=hparams['loss_class_weights'])
         self.f1_score_train = MulticlassF1Score(
-            num_classes=self.n_classes, average='macro')
+            num_classes=self.hparams["n_classes"], average='macro')
         self.f1_score_train_per_class = MulticlassF1Score(
-            num_classes=self.n_classes, average='none')
+            num_classes=self.hparams["n_classes"], average='none')
         self.f1_score_val = MulticlassF1Score(
-            num_classes=self.n_classes, average='macro')
+            num_classes=self.hparams["n_classes"], average='macro')
         self.f1_score_val_per_class = MulticlassF1Score(
-            num_classes=self.n_classes, average='none')
+            num_classes=self.hparams["n_classes"], average='none')
 
     def forward(self, x):
         """
@@ -135,14 +137,14 @@ class Small_PET_CNN(pl.LightningModule):
         self.f1_score_train.reset()
         self.f1_score_train_per_class.reset()
 
-        self.log_dict({
+        log_dict = {
             'train_loss_epoch': avg_loss,
             'train_f1_epoch': f1_epoch,
-            'train_f1_epoch_class_0': f1_epoch_per_class[0],
-            'train_f1_epoch_class_1': f1_epoch_per_class[1],
-            'train_f1_epoch_class_2': f1_epoch_per_class[2],
             'step': float(self.current_epoch)
-        })
+        }
+        for i in range(self.hparams["n_classes"]):
+            log_dict[f"train_f1_epoch_class_{i}"] = f1_epoch_per_class[i]
+        self.log_dict(log_dict)
 
         im = self.generate_confusion_matrix(training_step_outputs)
         self.logger.experiment.add_image(
@@ -156,14 +158,14 @@ class Small_PET_CNN(pl.LightningModule):
         self.f1_score_val.reset()
         self.f1_score_val_per_class.reset()
 
-        self.log_dict({
+        log_dict = {
             'val_loss_epoch': avg_loss,
             'val_f1_epoch': f1_epoch,
-            'val_f1_epoch_class_0': f1_epoch_per_class[0],
-            'val_f1_epoch_class_1': f1_epoch_per_class[1],
-            'val_f1_epoch_class_2': f1_epoch_per_class[2],
             'step': float(self.current_epoch)
-        })
+        }
+        for i in range(self.hparams["n_classes"]):
+            log_dict[f"val_f1_epoch_class_{i}"] = f1_epoch_per_class[i]
+        self.log_dict(log_dict)
 
         im = self.generate_confusion_matrix(validation_step_outputs)
         self.logger.experiment.add_image(
@@ -178,15 +180,15 @@ class Small_PET_CNN(pl.LightningModule):
         labels = torch.cat([tmp['labels'] for tmp in outs])
 
         confusion = torchmetrics.ConfusionMatrix(
-            num_classes=self.n_classes).to(outputs.get_device())
+            num_classes=self.hparams["n_classes"]).to(outputs.get_device())
         confusion(outputs, labels)
         computed_confusion = confusion.compute().detach().cpu().numpy().astype(int)
 
         # confusion matrix
         df_cm = pd.DataFrame(
             computed_confusion,
-            index=self._label_ind_by_names.values(),
-            columns=self._label_ind_by_names.values(),
+            index=self.label_ind_by_names.values(),
+            columns=self.label_ind_by_names.values(),
         )
 
         fig, ax = plt.subplots(figsize=(10, 5))
@@ -195,8 +197,8 @@ class Small_PET_CNN(pl.LightningModule):
         sns.heatmap(df_cm, annot=True, annot_kws={
                     "size": 16}, fmt='d', ax=ax, cmap='crest')
         ax.legend(
-            self._label_ind_by_names.values(),
-            self._label_ind_by_names.keys(),
+            self.label_ind_by_names.values(),
+            self.label_ind_by_names.keys(),
             handler_map={int: IntHandler()},
             loc='upper left',
             bbox_to_anchor=(1.2, 1)

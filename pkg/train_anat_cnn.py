@@ -64,7 +64,7 @@ def train(hparams):
             mode='min',
             patience=hparams['early_stopping_patience']
         )],
-        overfit_batches=0.25
+        overfit_batches=0.07
     )
     
     trainer.fit(model, trainloader, valloader)
@@ -80,8 +80,8 @@ if __name__ == '__main__':
         'norm_std_val': 830.2466
     }
 
-    for lr in [1e-4, 1e-5, 1e-6]:
-       for bs in [8, 16, 32]:
+    for lr in [1e-4]:
+       for bs in [32]:
            hparams['lr'] = lr
            hparams['batch_size'] = bs
            train(hparams)

@@ -68,7 +68,7 @@ class PETAV1451Dataset(Dataset):
         return self.ds.loc[combined_idx]
 
 class AnatDataset(Dataset):
-    def __init__(self, path, transform=None, normalization=False, subset=None):
+    def __init__(self, path, transform=None, normalization=False, subset=None, binary=False):
         self.transform = transform
         self.ds = pd.read_csv(path)
         # TODO: consider also dropping the values in case there is no mask available
@@ -122,16 +122,19 @@ class AnatDataset(Dataset):
             data = normalization_mask(data)
 
 
+        # apply mask again
+        data *= binary_mask
+
         label = self.ds.loc[index, 'label']
-        label = label_mapping_mri[label]
+        label = label_mapping[label]
         label = torch.tensor(label)
         return data, label
     
     def get_label_distribution(self):
         counts_normalized = self.ds['label'].value_counts(normalize=True)
-        counts_normalized = counts_normalized.reindex(index = ['CN','MCI','AD'])
+        counts_normalized = counts_normalized.reindex(index = ['CN','MCI','Dementia'])
         counts = self.ds['label'].value_counts()
-        counts = counts.reindex(index = ['CN','MCI','AD'])
+        counts = counts.reindex(index = ['CN','MCI','Dementia'])
         
         return torch.tensor(counts), torch.tensor(counts_normalized)
         

@@ -119,7 +119,7 @@ class AnatDataset(Dataset):
 
         if self.normalization:
             normalization_mask = Normalize(mean=mean_mask, std=std_mask)
-            data = normalization_mask(data)
+            data = normalization_mask(data) * binary_mask
 
 
         label = self.ds.loc[index, 'label']

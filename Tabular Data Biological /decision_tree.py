@@ -6,12 +6,12 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import LabelEncoder
 import matplotlib.pyplot as plt
 
-def train_decision_tree():
+def train_decision_tree(balanced = 'unbalanced'):
     data = get_data()
     X_train, y_train = data[0], data[1]
     X_val, y_val = data[2], data[3]
 
-    tree_model = DecisionTreeClassifier(criterion='gini', max_depth=5, random_state=1)
+    tree_model = DecisionTreeClassifier(criterion='gini', max_depth=5, random_state=1, class_weight= balanced)
     clf = tree_model.fit(X_train, y_train)
     y_pred = clf.predict(X_val)
 
@@ -90,7 +90,7 @@ def encode_labels(y_train, y_val):
 
 if __name__ == "__main__":
     #train_decision_tree()
-    model = train_decision_tree()
-    predict_MCI(model)
+    model = train_decision_tree(balanced = 'balanced')
+    #predict_MCI(model)
 
 

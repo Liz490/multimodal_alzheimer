@@ -32,25 +32,25 @@ def create_csv(adni_merged, list_ids, MCI = True, extract_MCI = False):
         while i < rows_df.shape[0] - 1:
             label = rows_df['DX'].iloc[i]
             if MCI or label != 'MCI' or extract_MCI:
-                current_ses = rows_df['EXAMDATE'].iloc[i]
-                next_ses = rows_df['EXAMDATE'].iloc[i + 1]
+                current_ses = rows_df['Month_bl'].iloc[i]
+                next_ses = rows_df['Month_bl'].iloc[i + 1]
 
                 if not extract_MCI or label == 'MCI':
-                    new_row = create_row(rows_df=rows_df, i=i, subject=subject, current_ses=current_ses)
+                    new_row = create_row(rows_df=rows_df, i=i, subject=subject)
                     df_tabular = df_tabular.append(new_row, ignore_index=True)
 
-                # if next session is within 6 months, it is considered 1 examination -> skip results from next session
-                if (next_ses.year - current_ses.year) * 12 + next_ses.month - current_ses.month < 6:
+                # if next session is within 5.8 months, it is considered 1 examination -> skip results from next session
+                if (next_ses - current_ses) < 5.8:
                     i += 1
             i += 1
 
         if i < rows_df.shape[0] and (rows_df['DX'].iloc[i] != 'MCI' or MCI) and (not extract_MCI or rows_df['DX'].iloc[i] == 'MCI'):
-            new_row = create_row(rows_df=rows_df, i=i, subject=subject, current_ses=rows_df['EXAMDATE'].iloc[i])
+            new_row = create_row(rows_df=rows_df, i=i, subject=subject)
             df_tabular = df_tabular.append(new_row, ignore_index=True)
 
     return df_tabular
 
-def create_row(rows_df, i, subject, current_ses):
+def create_row(rows_df, i, subject):
     ventr = rows_df['Ventricles'].iloc[i]
     hippo = rows_df['Hippocampus'].iloc[i]
     wb = rows_df['WholeBrain'].iloc[i]
@@ -58,12 +58,10 @@ def create_row(rows_df, i, subject, current_ses):
     fusi = rows_df['Fusiform'].iloc[i]
     midTemp = rows_df['MidTemp'].iloc[i]
     icv = rows_df['ICV'].iloc[i]
-    age = rows_df['AGE'].iloc[i]
+    age = rows_df['AGE'].iloc[i] + rows_df['Month_bl'].iloc[i]*(1/12)
     label = rows_df['DX'].iloc[i]
     education = rows_df['PTEDUCAT'].iloc[i]
-
-    if label == "Dementia":
-        print('stop')
+    current_ses = rows_df['EXAMDATE'].iloc[i]
 
     new_row = {'ID': subject, 'ses': current_ses, 'Ventricles': ventr / icv,
                'Hippocampus': hippo / icv,
@@ -83,8 +81,8 @@ def extractMCI_val():
     df_tabular.to_csv(path_save)
 
 if __name__ == "__main__":
-    #writeTables(MCI=False)
+    writeTables(MCI=False)
 
-    extractMCI_val()
+    #extractMCI_val()
 
     print('CSV files for each set was created!')

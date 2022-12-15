@@ -9,6 +9,7 @@ from torchvision.transforms import Normalize
 
 label_mapping = {'CN': 0, 'MCI': 1, 'Dementia': 2}
 label_mapping_mri = {'CN': 0, 'MCI': 1, 'AD': 2}
+label_mapping_binary = {'CN': 0, 'Dementia': 1}
 
 class PETAV1451Dataset(Dataset):
     def __init__(self, path, transform=None, balanced=False):
@@ -69,12 +70,17 @@ class PETAV1451Dataset(Dataset):
 
 class AnatDataset(Dataset):
     def __init__(self, path, transform=None, normalization=False, subset=None, binary=False):
+        self.binary = binary
         self.transform = transform
         self.ds = pd.read_csv(path)
         # TODO: consider also dropping the values in case there is no mask available
         self.ds = self.ds.dropna(subset='path_anat')
         self.ds.reset_index(drop=True, inplace=True)
         self.normalization = normalization
+
+        if self.binary:
+            self.ds = self.ds[self.ds['label'] != 'MCI']
+            self.ds.reset_index(drop=True, inplace=True)
         
         if subset:
             self.ds = self.ds.sample(n=subset, random_state=1)
@@ -126,15 +132,24 @@ class AnatDataset(Dataset):
         data *= binary_mask
 
         label = self.ds.loc[index, 'label']
-        label = label_mapping[label]
+        if self.binary:
+            label = label_mapping_binary[label]
+        else:
+            label = label_mapping[label]
         label = torch.tensor(label)
         return data, label
     
     def get_label_distribution(self):
         counts_normalized = self.ds['label'].value_counts(normalize=True)
-        counts_normalized = counts_normalized.reindex(index = ['CN','MCI','Dementia'])
+        if self.binary:
+            counts_normalized = counts_normalized.reindex(index = ['CN','Dementia'])
+        else:
+            counts_normalized = counts_normalized.reindex(index = ['CN','MCI','Dementia'])
         counts = self.ds['label'].value_counts()
-        counts = counts.reindex(index = ['CN','MCI','Dementia'])
+        if self.binary:
+            counts = counts.reindex(index = ['CN', 'Dementia'])
+        else:
+            counts = counts.reindex(index = ['CN','MCI','Dementia'])
         
         return torch.tensor(counts), torch.tensor(counts_normalized)
         

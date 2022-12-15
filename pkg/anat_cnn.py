@@ -3,6 +3,14 @@ import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 from torchmetrics.classification import MulticlassF1Score, MulticlassConfusionMatrix
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+import io
+import matplotlib.pyplot as plt
+from PIL import Image
+import torchmetrics
+import torchvision
 
 from MedicalNet.models import resnet
 from MedicalNet.model import generate_model
@@ -11,11 +19,28 @@ import sys
 
 from focalloss import FocalLoss
 
+class IntHandler:
+    """
+    See https://stackoverflow.com/a/73388839
+    """
+
+    def legend_artist(self, legend, orig_handle, fontsize, handlebox):
+        x0, y0 = handlebox.xdescent, handlebox.ydescent
+        text = plt.matplotlib.text.Text(x0, y0, str(orig_handle))
+        handlebox.add_artist(text)
+        return text
+
+
 class Anat_CNN(pl.LightningModule):
 
     def __init__(self, hparams):
         super().__init__()
         self.save_hyperparameters(hparams)
+        if hparams["n_classes"] == 3:
+            self.label_ind_by_names = {'CN': 0, 'MCI': 1, 'AD': 2}
+        else:
+            self.label_ind_by_names = {'CN': 0, 'AD': 1}
+
         
         # Initialize Model
         opts = parse_opts()
@@ -47,7 +72,7 @@ class Anat_CNN(pl.LightningModule):
                                         nn.Flatten(),
                                         nn.Linear(2048, 100),
                                         nn.ReLU(),
-                                        nn.Linear(100,3))
+                                        nn.Linear(100,2))
 
         # Only optimize weights in the last few layers
         for name, param in self.model.named_parameters():
@@ -87,8 +112,8 @@ class Anat_CNN(pl.LightningModule):
         #self.criterion = FocalLoss(gamma=25)
             
 
-        self.f1_score_train = MulticlassF1Score(num_classes=3, average='macro')
-        self.f1_score_val = MulticlassF1Score(num_classes=3, average='macro')
+        self.f1_score_train = MulticlassF1Score(num_classes=2, average='macro')
+        self.f1_score_val = MulticlassF1Score(num_classes=2, average='macro')
 
     def forward(self, x):
         """
@@ -125,8 +150,10 @@ class Anat_CNN(pl.LightningModule):
         x = x.unsqueeze(1)
         x = x.to(dtype=torch.float32)
         y_hat = self.forward(x).to(dtype=torch.double)
+        # print(y_hat)
+        print(f'ground truth: {y}')
         if mode == 'train':
-            # print(f'pred {torch.argmax(y_hat, dim=1)}, gt {y}')
+            print(f'pred {torch.argmax(y_hat, dim=1)}, gt {y}')
             sftmx = nn.Softmax(dim=1)
             # y_hat_sftmx = sftmx(y_hat)
             # print(f'pred prob {torch.max(y_hat_sftmx, dim=1)}')
@@ -136,7 +163,7 @@ class Anat_CNN(pl.LightningModule):
             self.f1_score_val(y_hat, y)
         elif mode == 'train':
             self.f1_score_train(y_hat, y)
-        return loss
+        return {'loss': loss, 'outputs': y_hat, 'labels': y}
 
     def training_step(self, batch, batch_idx):
         #pbar = {'train_loss': self.general_step(batch, batch_idx, "train")}
@@ -161,8 +188,14 @@ class Anat_CNN(pl.LightningModule):
             'step': float(self.current_epoch)
         })
 
+        im = self.generate_confusion_matrix(training_step_outputs)
+        self.logger.experiment.add_image(
+            "train_confusion_matrix", im, global_step=self.current_epoch)
+
+
     def validation_epoch_end(self, validation_step_outputs):
-        avg_loss = torch.stack(validation_step_outputs).mean()
+        avg_loss = torch.stack([x['loss']
+                               for x in validation_step_outputs]).mean()
         f1_epoch = self.f1_score_val.compute()
         self.f1_score_val.reset()
 
@@ -171,3 +204,44 @@ class Anat_CNN(pl.LightningModule):
             'val_f1_epoch': f1_epoch,
             'step': float(self.current_epoch)
         })
+    
+    def generate_confusion_matrix(self, outs):
+        """
+        See https://stackoverflow.com/a/73388839
+        """
+
+        outputs = torch.cat([tmp['outputs'] for tmp in outs])
+        labels = torch.cat([tmp['labels'] for tmp in outs])
+
+        confusion = torchmetrics.ConfusionMatrix(
+            num_classes=self.hparams["n_classes"]).to(outputs.get_device())
+        confusion(outputs, labels)
+        computed_confusion = confusion.compute().detach().cpu().numpy().astype(int)
+
+        # confusion matrix
+        df_cm = pd.DataFrame(
+            computed_confusion,
+            index=self.label_ind_by_names.values(),
+            columns=self.label_ind_by_names.values(),
+        )
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        fig.subplots_adjust(left=0.05, right=.65)
+        sns.set(font_scale=1.2)
+        sns.heatmap(df_cm, annot=True, annot_kws={
+                    "size": 16}, fmt='d', ax=ax, cmap='crest')
+        ax.legend(
+            self.label_ind_by_names.values(),
+            self.label_ind_by_names.keys(),
+            handler_map={int: IntHandler()},
+            loc='upper left',
+            bbox_to_anchor=(1.2, 1)
+        )
+        buf = io.BytesIO()
+
+        plt.savefig(buf, format='jpeg', bbox_inches='tight')
+        plt.close('all')
+        buf.seek(0)
+        with Image.open(buf) as im:
+            return torchvision.transforms.ToTensor()(im)
+

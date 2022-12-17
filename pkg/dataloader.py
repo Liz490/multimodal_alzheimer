@@ -193,6 +193,8 @@ class MultiModalDataset(Dataset):
 
         path_mri = sample['path_anat']
         path_mri_mask = sample['path_anat_mask']
+        print(path_mri)
+        print(path_mri_mask)
         if path_mri == None:
             mri_data = None
         else:

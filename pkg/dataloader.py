@@ -6,6 +6,7 @@ import os
 import numpy as np
 from datetime import datetime, timedelta
 import sys
+from torchvision.transforms import ToTensor, Normalize
 
 pd.options.mode.chained_assignment = None
 
@@ -53,6 +54,9 @@ def merge_two_dfs(df1, df2):
     return df2
 
 
+# transforms
+to_tensor = ToTensor()
+
 class MultiModalDataset(Dataset):
     
     def __init__(self, 
@@ -64,7 +68,7 @@ class MultiModalDataset(Dataset):
                 transform_mri=None,
                 transform_tabular=None,
                 normalize_pet=None,
-                normalize_mri=None
+                **normalize_mri  # dict with mean and std or 'min_max' (additional percentil arg) or per_scan
                 ):
         """
         The constructor for MultiModalDataset class.
@@ -143,7 +147,18 @@ class MultiModalDataset(Dataset):
         self.transform_tabular = transform_tabular  
         # normalization
         self.normalize_pet = normalize_pet
+        if self.normalize_pet:
+            assert 'mean' in self.normalize_pet.keys()
+            assert 'std' in self.normalize_pet.keys()
+            #(self.normalize_pet.contains_key())
         self.normalize_mri = normalize_mri
+        print(self.normalize_mri)
+
+        if len(self.normalize_mri) > 1:
+            print('WARNING: YOU ARE NORMALIZING THE DATA MULTIPLE TIMES! PLEASE ONLY PROVIDE AT MOST ONE KEYWORD ARGUMENT')
+        # if 'per_scan_norm' in self.normalize_mri:
+        #     print('norm')
+        #     print(self.normalize_mri['per_scan_norm'])
 
     def __len__(self):
         return len(self.ds)
@@ -161,16 +176,85 @@ class MultiModalDataset(Dataset):
         else:
             pet_im = nib.load(pet_path)
             pet_data = pet_im.get_fdata()
-        if self.transform_pet:
-            pet_data = self.transform_pet(pet_data)
+            if self.transform_pet:
+                pet_data = self.transform_pet(pet_data)
+            
+            pet_data = to_tensor(pet_data)
+
+            if self.normalize_pet:
+                normalize_pet = Normalize(mean=self.normalize_pet['mean'], std=self.normalize_pet['std'])
+                pet_data = normalize_pet(pet_data)
+
         data['pet1451'] = pet_data
 
-        # TODO: if self.normalize
+        ###########
+        # MRI T1W #
+        ###########
 
+        path_mri = sample['path_anat']
+        path_mri_mask = sample['path_anat_mask']
+        if path_mri == None:
+            mri_data = None
+        else:
+            mri_im = nib.load(path_mri)
+            mri_data = mri_im.get_fdata()
+        
+            if self.transform_mri:
+                mri_data = self.transform_mri(mri_data)
+            
+            mri_data = to_tensor(mri_data)
+
+            if 'per_scan_norm' in self.normalize_mri:
+                mri_mask = nib.load(path_mri_mask)
+                binary_mask_mri = mri_mask.get_fdata()
+                binary_mask_mri = torch.tensor(binary_mask_mri)
+
+                print(mri_data.shape)
+                print(binary_mask_mri.shape)
+                # 1. set non-brain voxels to 0 
+                data_masked_mri = mri_data * binary_mask_mri
+        
+                # 2. flatten the tensor and remove all zero entries
+                data_masked_mri = data_masked_mri.reshape(-1)
+                data_masked_mri = data_masked_mri[data_masked_mri.nonzero()]
+
+                if self.normalize_mri['per_scan_norm'] == 'normalize':
+                    # 3. compute mean and std
+                    std_mask_mri, mean_mask_mri = torch.std_mean(data_masked_mri)
+
+                    normalize_per_scan_mri = Normalize(mean=mean_mask_mri, std=std_mask_mri,)
+                    mri_data = normalize_per_scan_mri(mri_data)
+
+                    # 4. Multiply normalized data again with brain mask
+                    mri_data *= binary_mask_mri
+                else:
+                    q = 0.99
+                    quant_max = torch.quantile(data_masked_mri, q, interpolation='linear')
+                    quant_min = torch.quantile(data_masked_mri, 1-q, interpolation='linear')
+
+                    mri_data = (mri_data - quant_min) / (quant_max - quant_min)
+                    mri_data[mri_data > 1] = 1
+                    mri_data[mri_data < 0] = 0
+
+                    mri_data *= binary_mask_mri
+
+            elif 'all_scan_norm' in self.normalize_mri:
+                assert 'mean' in self.normalize_mri['all_scan_norm'].keys()
+                assert 'std' in self.normalize_mri['all_scan_norm'].keys()
+                normalize_mri = Normalize(mean=self.normalize_mri['all_scan_norm']['mean'], std=self.normalize_pet['all_scan_norm']['std'])
+                pet_data = normalize_pet(pet_data)
+
+                
+       
+
+        data['mri'] = mri_data
+
+    
         #########
         # LABEL #
         #########
-        data['label'] = self.label_mapping[sample['label']]
+        label = self.label_mapping[sample['label']]
+        data['label'] = torch.tensor(label)
 
         #'pet1451', 't1w', 'tabular'
 
@@ -232,14 +316,19 @@ class PETAV1451Dataset(Dataset):
         return self.ds.loc[combined_idx]
 
 if __name__ == "__main__":
+    norm_mri = 3
     path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-    dataset = MultiModalDataset(path=path, modalities=['pet1451'])
+    dataset = MultiModalDataset(path=path, modalities=['pet1451', 't1w'], per_scan_norm='normalize')
     print(len(dataset))
     d = dataset[1]
     print(d['pet1451'].shape)
+    print(d['mri'].shape)
     print(d['label'])
     # x, y = dataset[3]
     # print(x.shape)
     # print(y)
+
+    
+
 
     

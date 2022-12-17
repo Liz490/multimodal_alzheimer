@@ -55,7 +55,8 @@ def merge_two_dfs(df1, df2):
 
 
 # transforms
-to_tensor = ToTensor()
+# WATCH OUT THIS PERMUTES THE DIMENSIONS OF THE TENSOR
+#to_tensor = ToTensor()
 
 class MultiModalDataset(Dataset):
     
@@ -168,7 +169,7 @@ class MultiModalDataset(Dataset):
         sample = self.ds.iloc[index]
         print(sample)
         ########
-        # PET #
+        # PET  #
         ########
         pet_path = sample['path_pet1451']
         if pet_path == None:
@@ -179,7 +180,7 @@ class MultiModalDataset(Dataset):
             if self.transform_pet:
                 pet_data = self.transform_pet(pet_data)
             
-            pet_data = to_tensor(pet_data)
+            pet_data = torch.tensor(pet_data)
 
             if self.normalize_pet:
                 normalize_pet = Normalize(mean=self.normalize_pet['mean'], std=self.normalize_pet['std'])
@@ -193,18 +194,18 @@ class MultiModalDataset(Dataset):
 
         path_mri = sample['path_anat']
         path_mri_mask = sample['path_anat_mask']
-        print(path_mri)
-        print(path_mri_mask)
+        # print(path_mri)
+        # print(path_mri_mask)
         if path_mri == None:
             mri_data = None
         else:
             mri_im = nib.load(path_mri)
             mri_data = mri_im.get_fdata()
-        
+            
             if self.transform_mri:
                 mri_data = self.transform_mri(mri_data)
-            
-            mri_data = to_tensor(mri_data)
+            #print(mri_data.shape)
+            mri_data = torch.tensor(mri_data)
 
             if 'per_scan_norm' in self.normalize_mri:
                 mri_mask = nib.load(path_mri_mask)
@@ -251,7 +252,21 @@ class MultiModalDataset(Dataset):
 
         data['mri'] = mri_data
 
-    
+        #########################################################################################################
+        # STILL TODO!!!!!
+        ###########
+        # TABULAR #
+        ########### 
+        age = sample['AGE']
+        if age == None:
+            tabular_data = None
+        else:
+            tabular_data = torch.tensor(5)
+
+        data['tabular'] = tabular_data
+        # STILL TODO!!!!!
+        #########################################################################################################
+
         #########
         # LABEL #
         #########
@@ -318,17 +333,26 @@ class PETAV1451Dataset(Dataset):
         return self.ds.loc[combined_idx]
 
 if __name__ == "__main__":
+
+
+    # normalize_pet: None or dict with 'mean' and 'std'
+
     norm_mri = 3
     path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     dataset = MultiModalDataset(path=path, modalities=['pet1451', 't1w'], per_scan_norm='normalize')
     print(len(dataset))
-    d = dataset[1]
+    d = dataset[2]
     print(d['pet1451'].shape)
     print(d['mri'].shape)
+    print(d['tabular'])
     print(d['label'])
     # x, y = dataset[3]
     # print(x.shape)
     # print(y)
+    mri_data = d['mri']
+    print(mri_data)
+    print(mri_data.min())
+    print(mri_data.max())
 
     
 

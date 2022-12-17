@@ -90,9 +90,11 @@ class AnatDataset(Dataset):
         return len(self.ds)
 
     def __getitem__(self, index):
+        print(self.ds.iloc[index])
         path_idx = self.ds.loc[index, 'path_anat']
         path_mask = self.ds.loc[index, 'path_anat_mask']
-
+        print(path_idx)
+        print(path_mask)
         # image
         im = nib.load(path_idx)
         data = im.get_fdata()
@@ -108,6 +110,8 @@ class AnatDataset(Dataset):
 
         # compute mean and variance wrt brain mask
         # 1. set non-brain voxels to 0 
+        print(data.shape)
+        print(binary_mask.shape)
         data_masked = data * binary_mask
         
         # 2. flatten the tensor and remove all zero entries
@@ -156,9 +160,9 @@ class AnatDataset(Dataset):
 
 if __name__ == "__main__":
     path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-    dataset = AnatDataset(path=path, subset=15)
+    dataset = AnatDataset(path=path)
     print(len(dataset))
-    # x, y = dataset[3]
+    x, y = dataset[10]
     # print('min and max after normalization:')
     # print(x.min())
     # print(x.max())

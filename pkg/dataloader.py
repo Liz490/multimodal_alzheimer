@@ -279,8 +279,10 @@ class MultiModalDataset(Dataset):
         label = self.label_mapping[sample['label']]
         data['label'] = torch.tensor(label)
 
-        #'pet1451', 't1w', 'tabular'
-
+        # before we return the dict we have to remove all None keys because
+        # the collate_fn function in the pytorch dataloader tries to collate each individual key to a batch
+        # and if there is a None key it does not know how to handle it
+        data = {k: v for k, v in data.items() if v is not None}
         return data
 
     def get_label_distribution(self):

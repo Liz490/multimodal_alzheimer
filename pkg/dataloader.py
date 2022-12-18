@@ -283,6 +283,20 @@ class MultiModalDataset(Dataset):
 
         return data
 
+    def get_label_distribution(self):
+        counts_normalized = self.ds['label'].value_counts(normalize=True)
+        if self.binary_classification:
+            counts_normalized = counts_normalized.reindex(index = ['CN', 'Dementia'])
+        else:
+            counts_normalized = counts_normalized.reindex(index = ['CN','MCI','Dementia'])
+        counts = self.ds['label'].value_counts()
+        if self.binary_classification:
+            counts = counts.reindex(index = ['CN', 'Dementia'])
+        else:
+            counts = counts.reindex(index = ['CN','MCI','Dementia'])
+        
+        return torch.tensor(counts), torch.tensor(counts_normalized)
+
     
 label_mapping = {'CN': 0, 'MCI': 1, 'Dementia': 2}
 

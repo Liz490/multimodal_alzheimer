@@ -7,6 +7,8 @@ import numpy as np
 from datetime import datetime, timedelta
 import sys
 from torchvision.transforms import ToTensor, Normalize
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 pd.options.mode.chained_assignment = None
 
@@ -201,6 +203,9 @@ class MultiModalDataset(Dataset):
         else:
             mri_im = nib.load(path_mri)
             mri_data = mri_im.get_fdata()
+            # sns.histplot(mri_data.reshape(-1))
+            # plt.savefig('a')
+            
             
             if self.transform_mri:
                 mri_data = self.transform_mri(mri_data)
@@ -220,6 +225,7 @@ class MultiModalDataset(Dataset):
                 # 2. flatten the tensor and remove all zero entries
                 data_masked_mri = data_masked_mri.reshape(-1)
                 data_masked_mri = data_masked_mri[data_masked_mri.nonzero()]
+                
 
                 if self.normalize_mri['per_scan_norm'] == 'normalize':
                     # 3. compute mean and std
@@ -339,7 +345,7 @@ if __name__ == "__main__":
 
     norm_mri = 3
     path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-    dataset = MultiModalDataset(path=path, modalities=['pet1451', 't1w'], per_scan_norm='normalize')
+    dataset = MultiModalDataset(path=path, modalities=['pet1451', 't1w'], per_scan_norm='min_max')
     print(len(dataset))
     d = dataset[2]
     print(d['pet1451'].shape)
@@ -350,9 +356,19 @@ if __name__ == "__main__":
     # print(x.shape)
     # print(y)
     mri_data = d['mri']
-    print(mri_data)
-    print(mri_data.min())
-    print(mri_data.max())
+    print(mri_data[55,55,55])
+    # print(mri_data.min())
+    # print(mri_data.max())
+    # bins = 100
+    # hist = torch.histc(mri_data, bins=bins, min=0, max=1)
+    sns.histplot(mri_data.reshape(-1).numpy(), bins=20)
+    plt.savefig('a')
+    # x = range(0,1,0.01)
+    # plt.bar(x, hist, align='center')
+    # plt.xlabel('Bins)
+    # plt.show()
+
+
 
     
 

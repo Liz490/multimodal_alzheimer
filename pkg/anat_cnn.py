@@ -112,8 +112,8 @@ class Anat_CNN(pl.LightningModule):
         #self.criterion = FocalLoss(gamma=25)
             
 
-        self.f1_score_train = MulticlassF1Score(num_classes=2, average='macro')
-        self.f1_score_val = MulticlassF1Score(num_classes=2, average='macro')
+        self.f1_score_train = MulticlassF1Score(num_classes=hparams["n_classes"], average='macro')
+        self.f1_score_val = MulticlassF1Score(num_classes=hparams["n_classes"], average='macro')
 
     def forward(self, x):
         """
@@ -146,14 +146,17 @@ class Anat_CNN(pl.LightningModule):
         torch.save(self, path)
 
     def general_step(self, batch, batch_idx, mode):
-        (x, y) = batch
+        
+        x = batch['mri']
+        y = batch['label']
         x = x.unsqueeze(1)
         x = x.to(dtype=torch.float32)
         y_hat = self.forward(x).to(dtype=torch.double)
-        # print(y_hat)
-        print(f'ground truth: {y}')
+        # print(y_hat.shape)
+        # print(sys.exit())
+        # print(f'ground truth: {y}')
         if mode == 'train':
-            print(f'pred {torch.argmax(y_hat, dim=1)}, gt {y}')
+            # print(f'pred {torch.argmax(y_hat, dim=1)}, gt {y}')
             sftmx = nn.Softmax(dim=1)
             # y_hat_sftmx = sftmx(y_hat)
             # print(f'pred prob {torch.max(y_hat_sftmx, dim=1)}')

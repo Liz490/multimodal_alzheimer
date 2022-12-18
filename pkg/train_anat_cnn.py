@@ -2,7 +2,7 @@ import os
 from numpy import float64
 import torch
 from torchaudio import transforms
-from dataloader import AnatDataset
+from dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
 from sklearn.metrics import f1_score
@@ -30,10 +30,10 @@ def train(hparams):
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
-    trainset = AnatDataset(
-        path=trainpath, transform=transform_train, normalization=True, binary=True)
-    valset = AnatDataset(
-        path=valpath, transform=transform_val, normalization=True, binary=True)
+    trainset = MultiModalDataset(
+        path=trainpath, modalities=['t1w'], per_scan_norm='min_max')
+    valset = MultiModalDataset(
+        path=valpath, modalities=['t1w'], per_scan_norm='min_max')
     
     trainloader = DataLoader(
         trainset,
@@ -51,6 +51,7 @@ def train(hparams):
     _, weight_normalized = trainset.get_label_distribution()
     hparams['loss_class_weights'] = 1 - weight_normalized
     print(1 - weight_normalized)
+    
     # sys.exit()
     model = Anat_CNN(hparams=hparams)
 
@@ -72,13 +73,13 @@ def train(hparams):
 
 if __name__ == '__main__':
     hparams = {
-        'early_stopping_patience': 400,
-        'max_epochs': 400,
+        'early_stopping_patience': 100,
+        'max_epochs': 100,
         'norm_mean_train': 413.6510,
         'norm_std_train': 918.5371,
         'norm_mean_val': 418.4120,
         'norm_std_val': 830.2466,
-        'n_classes': 2
+        'n_classes': 3
     }
 
     for lr in [1e-4]:

@@ -84,7 +84,8 @@ class MultiModalDataset(Dataset):
         self.entire_ds = pd.read_csv(path)
 
         # remove MCI labels if desired
-        if binary_classification:
+        self.binary_classification = binary_classification
+        if self.binary_classification:
             self.entire_ds = self.entire_ds[self.entire_ds['label'] != 'MCI']
             self.label_mapping = {'CN': 0, 'Dementia': 1}
         else:
@@ -155,7 +156,7 @@ class MultiModalDataset(Dataset):
             assert 'std' in self.normalize_pet.keys()
             #(self.normalize_pet.contains_key())
         self.normalize_mri = normalize_mri
-        print(self.normalize_mri)
+        # print(self.normalize_mri)
 
         if len(self.normalize_mri) > 1:
             print('WARNING: YOU ARE NORMALIZING THE DATA MULTIPLE TIMES! PLEASE ONLY PROVIDE AT MOST ONE KEYWORD ARGUMENT')
@@ -169,7 +170,7 @@ class MultiModalDataset(Dataset):
     def __getitem__(self, index):
         data = {}
         sample = self.ds.iloc[index]
-        print(sample)
+        # print(sample)
         ########
         # PET  #
         ########
@@ -217,8 +218,8 @@ class MultiModalDataset(Dataset):
                 binary_mask_mri = mri_mask.get_fdata()
                 binary_mask_mri = torch.tensor(binary_mask_mri)
 
-                print(mri_data.shape)
-                print(binary_mask_mri.shape)
+                # print(mri_data.shape)
+                # print(binary_mask_mri.shape)
                 # 1. set non-brain voxels to 0 
                 data_masked_mri = mri_data * binary_mask_mri
         
@@ -280,10 +281,23 @@ class MultiModalDataset(Dataset):
         data['label'] = torch.tensor(label)
 
         #'pet1451', 't1w', 'tabular'
-
+        data = {k: v for k, v in data.items() if v is not None}
         return data
 
-    
+    def get_label_distribution(self):
+        counts_normalized = self.ds['label'].value_counts(normalize=True)
+        if self.binary_classification:
+            counts_normalized = counts_normalized.reindex(index = ['CN', 'Dementia'])
+        else:
+            counts_normalized = counts_normalized.reindex(index = ['CN','MCI','Dementia'])
+        counts = self.ds['label'].value_counts()
+        if self.binary_classification:
+            counts = counts.reindex(index = ['CN', 'Dementia'])
+        else:
+            counts = counts.reindex(index = ['CN','MCI','Dementia'])
+        
+        return torch.tensor(counts), torch.tensor(counts_normalized)
+
 label_mapping = {'CN': 0, 'MCI': 1, 'Dementia': 2}
 
 class PETAV1451Dataset(Dataset):

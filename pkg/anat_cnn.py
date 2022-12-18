@@ -72,7 +72,7 @@ class Anat_CNN(pl.LightningModule):
                                         nn.Flatten(),
                                         nn.Linear(2048, 100),
                                         nn.ReLU(),
-                                        nn.Linear(100,2))
+                                        nn.Linear(100,3))
 
         # Only optimize weights in the last few layers
         for name, param in self.model.named_parameters():

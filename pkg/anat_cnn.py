@@ -72,7 +72,14 @@ class Anat_CNN(pl.LightningModule):
                                         nn.Flatten(),
                                         nn.Linear(2048, 100),
                                         nn.ReLU(),
-                                        nn.Linear(100,3))
+                                        nn.Linear(100,2))
+
+                                        # nn.BatchNorm3d(2048),
+                                        # nn.Conv3d(2048, 2, (3, 3, 3), stride=(1, 1, 1), padding='same'),
+                                        # nn.ReLU(),
+                                        # nn.AdaptiveAvgPool3d(1),
+                                        # nn.Flatten())
+                                        
 
         # Only optimize weights in the last few layers
         for name, param in self.model.named_parameters():
@@ -191,9 +198,11 @@ class Anat_CNN(pl.LightningModule):
             'step': float(self.current_epoch)
         })
 
-        im = self.generate_confusion_matrix(training_step_outputs)
+        im_train = self.generate_confusion_matrix(training_step_outputs)
         self.logger.experiment.add_image(
-            "train_confusion_matrix", im, global_step=self.current_epoch)
+            "train_confusion_matrix", im_train, global_step=self.current_epoch)
+
+        
 
 
     def validation_epoch_end(self, validation_step_outputs):
@@ -207,6 +216,9 @@ class Anat_CNN(pl.LightningModule):
             'val_f1_epoch': f1_epoch,
             'step': float(self.current_epoch)
         })
+        im_val = self.generate_confusion_matrix(validation_step_outputs)
+        self.logger.experiment.add_image(
+            "val_confusion_matrix", im_val, global_step=self.current_epoch)
     
     def generate_confusion_matrix(self, outs):
         """

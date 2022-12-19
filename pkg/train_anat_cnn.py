@@ -31,9 +31,9 @@ def train(hparams):
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
     trainset = MultiModalDataset(
-        path=trainpath, modalities=['t1w'], per_scan_norm='min_max')
+        path=trainpath, modalities=['t1w'], per_scan_norm='min_max', binary_classification=True)
     valset = MultiModalDataset(
-        path=valpath, modalities=['t1w'], per_scan_norm='min_max')
+        path=valpath, modalities=['t1w'], per_scan_norm='min_max', binary_classification=True)
     
     trainloader = DataLoader(
         trainset,
@@ -64,8 +64,8 @@ def train(hparams):
             monitor='val_loss',
             mode='min',
             patience=hparams['early_stopping_patience']
-        )],
-        overfit_batches=0.2
+        )]#,
+        #overfit_batches=0.2
     )
     
     trainer.fit(model, trainloader, valloader)
@@ -73,16 +73,16 @@ def train(hparams):
 
 if __name__ == '__main__':
     hparams = {
-        'early_stopping_patience': 100,
-        'max_epochs': 100,
+        'early_stopping_patience': 7,
+        'max_epochs': 30,
         'norm_mean_train': 413.6510,
         'norm_std_train': 918.5371,
         'norm_mean_val': 418.4120,
         'norm_std_val': 830.2466,
-        'n_classes': 3
+        'n_classes': 2
     }
 
-    for lr in [1e-4]:
+    for lr in [1e-3]:
        for bs in [32]:
            hparams['lr'] = lr
            hparams['batch_size'] = bs

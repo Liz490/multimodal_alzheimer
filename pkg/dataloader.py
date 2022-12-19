@@ -238,7 +238,7 @@ class MultiModalDataset(Dataset):
                     # 4. Multiply normalized data again with brain mask
                     mri_data *= binary_mask_mri
                 else:
-                    q = 0.99
+                    q = 0.95
                     quant_max = torch.quantile(data_masked_mri, q, interpolation='linear')
                     quant_min = torch.quantile(data_masked_mri, 1-q, interpolation='linear')
 

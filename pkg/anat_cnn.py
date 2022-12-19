@@ -117,6 +117,14 @@ class Anat_CNN(pl.LightningModule):
             if not 'conv_seg' in name:
                 param.requires_grad = False
 
+        
+        # parameters_optim = []
+        # for name, param in model.named_parameters():
+        #     if 'conv_seg' in name:
+        #         parameters_optim.append({'params': param, 'lr': lr_finetune})
+        #     else:
+        #         parameters_optim.append({'params': param, 'lr': lr})
+
 
         
         #for n, l in resnet.module.named_modules:

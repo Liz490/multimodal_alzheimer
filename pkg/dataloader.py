@@ -71,6 +71,7 @@ class MultiModalDataset(Dataset):
                 transform_mri=None,
                 transform_tabular=None,
                 normalize_pet=None,
+                q=1,
                 **normalize_mri  # dict with mean and std or 'min_max' (additional percentil arg) or per_scan
                 ):
         """
@@ -80,6 +81,7 @@ class MultiModalDataset(Dataset):
            path (str): The path to the csv file that holds the paths for all modalities and all labels.   
         """
         self.modalities = modalities
+        self.q = q
         # read the dataframe with all modalities
         self.entire_ds = pd.read_csv(path)
 
@@ -238,9 +240,8 @@ class MultiModalDataset(Dataset):
                     # 4. Multiply normalized data again with brain mask
                     mri_data *= binary_mask_mri
                 else:
-                    q = 0.99
-                    quant_max = torch.quantile(data_masked_mri, q, interpolation='linear')
-                    quant_min = torch.quantile(data_masked_mri, 1-q, interpolation='linear')
+                    quant_max = torch.quantile(data_masked_mri, self.q, interpolation='linear')
+                    quant_min = torch.quantile(data_masked_mri, 1-self.q, interpolation='linear')
 
                     mri_data = (mri_data - quant_min) / (quant_max - quant_min)
                     mri_data[mri_data > 1] = 1

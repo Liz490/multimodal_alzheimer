@@ -45,7 +45,7 @@ class Anat_CNN(pl.LightningModule):
         # Initialize Model
         opts = parse_opts()
         opts.pretrain_path = '/vol/chameleon/projects/adni/adni_1/MedicalNet/pretrain/resnet_50_23dataset.pth'
-        opts.gpu_id = [0]
+        opts.gpu_id = [6]
         opts.input_W = 91
         opts.input_H = 91
         opts.input_D = 109
@@ -53,110 +53,46 @@ class Anat_CNN(pl.LightningModule):
         resnet, _ = generate_model(opts)
         self.model = resnet.module
 
-
-        module_list = []
+        modules = nn.ModuleList()
 
         # batchnorm after resnet block or not
-        if hparams["batchnorm_begin"] == True:
-            module_list.append(nn.BatchNorm3d(2048))
+        if "batchnorm_begin" in hparams and hparams["batchnorm_begin"]:
+            modules.append(nn.BatchNorm3d(2048))
 
         # add conv layers if list is not empty
-        prev_layer_size = 2048
-        for layer_size in hparams["conv_out_list"]:
-            module_list.append(nn.Conv3d(prev_layer_size, layer_size, (hparams["kernel_size"], ["kernel_size"], ["kernel_size"]), stride=(1, 1, 1), padding='same'))
-            
-            if hparams["batchnorm_conv_layers"]:
-                module_list.append(nn.BatchNorm3d(layer_size))
-            
-            module_list.append(nn.ReLU)
-            module_list.append(nn.MaxPool3d(2))
-            prev_layer_size = layer_size
+        n_in = 2048
+        if 'conv_out' in hparams:
+            for n_out, filter_size in zip(self.hparams["conv_out"],
+                                        self.hparams["filter_size"]):
+                modules.append(nn.Conv3d(n_in, n_out, filter_size, padding='same'))
+                if hparams["batchnorm_conv"]:
+                    modules.append(nn.BatchNorm3d(n_out))
+
+                modules.append(nn.ReLU())
+                modules.append(nn.MaxPool3d(2))
+                n_in = n_out
 
         # global avg pool
-        module_list.append(nn.AdaptiveAvgPool3d(1))
-        module_list.append(nn.Flatten())
+        modules.append(nn.AdaptiveAvgPool3d(1))
+        modules.append(nn.Flatten())
 
         # linear layers
-        module_list.append(nn.Linear(prev_layer_size, 100))
-        module_list.append(nn.ReLU())
-        module_list.append(nn.Linear(100, hparams["n_classes"]))
-        module_list.append(nn.ReLU())
-        
+        for n_out in hparams['linear_out']:
+            modules.append(nn.Linear(n_in, n_out))
+            if "batchnorm_dense" in hparams and hparams["batchnorm_dense"]:
+                modules.append(nn.BatchNorm1d(n_out))
+            modules.append(nn.ReLU())
+            n_in = n_out
+        modules.append(nn.Linear(n_in, hparams["n_classes"]))
+        modules.append(nn.ReLU())
 
-        
-        self.model.conv_seg = nn.Sequential(
-        # nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
-        #                                 nn.ReLU(),
-        #                                 nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
-        #                                 nn.ReLU(),
-        #                                 nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
-        #                                 nn.ReLU(),
-        #                                 nn.MaxPool3d(2),
-        #                                 nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
-        #                                 nn.ReLU(),
-        #                                 nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
-        #                                 nn.ReLU(),
-        #                                 nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
-        #                                 nn.ReLU(),
-                                        nn.BatchNorm3d(2048),
-                                        nn.AdaptiveAvgPool3d(1),
-                                        nn.Flatten(),
-                                        nn.Linear(2048, 100),
-                                        nn.ReLU(),
-                                        nn.Linear(100,2))
+        self.model.conv_seg = nn.Sequential(*modules)
 
-                                        # nn.BatchNorm3d(2048),
-                                        # nn.Conv3d(2048, 2, (3, 3, 3), stride=(1, 1, 1), padding='same'),
-                                        # nn.ReLU(),
-                                        # nn.AdaptiveAvgPool3d(1),
-                                        # nn.Flatten())
-                                        
-
-        # Only optimize weights in the last few layers
-        for name, param in self.model.named_parameters():
-            if not 'conv_seg' in name:
-                param.requires_grad = False
-
-        
-        # parameters_optim = []
-        # for name, param in model.named_parameters():
-        #     if 'conv_seg' in name:
-        #         parameters_optim.append({'params': param, 'lr': lr_finetune})
-        #     else:
-        #         parameters_optim.append({'params': param, 'lr': lr})
-
-
-        
-        #for n, l in resnet.module.named_modules:
-        # print(self.model)
-        # sys.exit()
-        # print(self.model.__dict__)
-        # print('=======================================================')
-        # print('=======================================================')
-        # print('=======================================================')
-        # self.model = nn.Sequential(
-        #     nn.Conv3d(1, 16, 5, padding='same'),
-        #     nn.ReLU()
-            # nn.MaxPool3d(2),
-            # nn.Conv3d(16, 32, 5, padding='same'),
-            # nn.ReLU(),
-            # nn.MaxPool3d(2),
-            # nn.Conv3d(32, 128, 3, padding='same'),
-            # nn.ReLU(),
-            # nn.MaxPool3d(2),
-            # nn.AdaptiveAvgPool3d(1),
-            # nn.Flatten(),
-            # nn.Linear(128, 3)
-        # )
-        # print(self.model.__dict__)
-        # print(self.model.__dict__)
-
-
-        self.criterion = nn.CrossEntropyLoss(
-            weight=hparams['loss_class_weights'])
-
-        #self.criterion = FocalLoss(gamma=25)
-            
+        if 'fl_gamma' in hparams and hparams['fl_gamma']:
+            self.criterion = FocalLoss(gamma=self.hparams['fl_gamma'])
+        else:
+            self.criterion = nn.CrossEntropyLoss(
+                weight=hparams['loss_class_weights'])
 
         self.f1_score_train = MulticlassF1Score(num_classes=hparams["n_classes"], average='macro')
         self.f1_score_val = MulticlassF1Score(num_classes=hparams["n_classes"], average='macro')
@@ -192,7 +128,6 @@ class Anat_CNN(pl.LightningModule):
         torch.save(self, path)
 
     def general_step(self, batch, batch_idx, mode):
-        
         x = batch['mri']
         y = batch['label']
         x = x.unsqueeze(1)
@@ -223,7 +158,23 @@ class Anat_CNN(pl.LightningModule):
         return self.general_step(batch, batch_idx, "val")
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters(), lr=self.hparams['lr'], weight_decay=self.hparams['l2_reg'])
+        parameters_optim = []
+        for name, param in self.model.named_parameters():
+            if 'conv_seg' in name:
+                parameters_optim.append({
+                    'params': param,
+                    'lr': self.hparams['lr']})
+            elif 'lr_pretrained' not in self.hparams or not self.hparams['lr_pretrained']:
+                param.requires_grad = False
+                parameters_optim.append({'params': param})
+            else:
+                param.requires_grad = True
+                parameters_optim.append({
+                    'params': param,
+                    'lr': self.hparams['lr_pretrained']})
+
+        return torch.optim.Adam(parameters_optim,
+                                weight_decay=self.hparams['l2_reg'])
 
     def training_epoch_end(self, training_step_outputs):
         avg_loss = torch.stack([x['loss']

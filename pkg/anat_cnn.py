@@ -52,6 +52,37 @@ class Anat_CNN(pl.LightningModule):
         
         resnet, _ = generate_model(opts)
         self.model = resnet.module
+
+
+        module_list = []
+
+        # batchnorm after resnet block or not
+        if hparams["batchnorm_begin"] == True:
+            module_list.append(nn.BatchNorm3d(2048))
+
+        # add conv layers if list is not empty
+        prev_layer_size = 2048
+        for layer_size in hparams["conv_out_list"]:
+            module_list.append(nn.Conv3d(prev_layer_size, layer_size, (hparams["kernel_size"], ["kernel_size"], ["kernel_size"]), stride=(1, 1, 1), padding='same'))
+            
+            if hparams["batchnorm_conv_layers"]:
+                module_list.append(nn.BatchNorm3d(layer_size))
+            
+            module_list.append(nn.ReLU)
+            module_list.append(nn.MaxPool3d(2))
+            prev_layer_size = layer_size
+
+        # global avg pool
+        module_list.append(nn.AdaptiveAvgPool3d(1))
+        module_list.append(nn.Flatten())
+
+        # linear layers
+        module_list.append(nn.Linear(prev_layer_size, 100))
+        module_list.append(nn.ReLU())
+        module_list.append(nn.Linear(100, hparams["n_classes"]))
+        module_list.append(nn.ReLU())
+        
+
         
         self.model.conv_seg = nn.Sequential(
         # nn.Conv3d(2048, 2048, (3, 3, 3), stride=(1, 1, 1), padding='same'),
@@ -184,7 +215,7 @@ class Anat_CNN(pl.LightningModule):
         return self.general_step(batch, batch_idx, "val")
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters(), lr=self.hparams['lr'])
+        return torch.optim.Adam(self.model.parameters(), lr=self.hparams['lr'], weight_decay=self.hparams['l2_reg'])
 
     def training_epoch_end(self, training_step_outputs):
         avg_loss = torch.stack([x['loss']

@@ -82,6 +82,12 @@ if __name__ == '__main__':
         'n_classes': 2
     }
 
+    # hparams["kernel_size"]   3, 4 or 5
+    # hparams["conv_out_list"] --> e.g. [256, 128,64]
+    # hparams["batchnorm_begin"] True/False
+    # hparams["batchnorm_conv_layers"] True/False
+    # hparams['l2_reg'] e.g. [1e-1, 1e-2, e-3]
+
     for lr in [1e-3]:
        for bs in [32]:
            hparams['lr'] = lr

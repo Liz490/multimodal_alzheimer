@@ -3,6 +3,7 @@ runs/
 figures/
 MedicalNet/
 lightning_logs/
+kfold_checkpoints/
 
 
 # IDEs

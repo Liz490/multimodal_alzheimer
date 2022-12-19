@@ -190,8 +190,10 @@ def optuna_optimization():
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    optuna_optimization()
+    # optuna_optimization()
     #####################
+
+    # Experimental
     # hparams = {
     #     'early_stopping_patience': 5,
     #     'max_epochs': 20,
@@ -208,4 +210,38 @@ if __name__ == '__main__':
     # # hparams['dropout_dense_p'] = 0.5
     # hparams['linear_out'] = 64
     # hparams["n_classes"] = 2
-    # train(hparams, experiment_name='two_class_1', experiment_version=None)
+
+
+    # Best two class:
+    hparams = {
+        'early_stopping_patience': 10,
+        'max_epochs': 50,
+        'norm_mean': 0.5145,
+        'norm_std': 0.5383,
+        'lr': 0.00075356,
+        'batch_size': 64,
+        'conv_out': [8, 16, 32, 64],
+        'filter_size': [3, 3, 3, 3],
+        'batchnorm': False,
+        'n_classes': 2,
+        'linear_out': 64
+    }
+
+    # Best two class with batchnorm
+    # hparams = {
+    #     'early_stopping_patience': 10,
+    #     'max_epochs': 50,
+    #     'norm_mean': 0.5145,
+    #     'norm_std': 0.5383,
+    #     'lr': 0.00075356,
+    #     'batch_size': 64,
+    #     'conv_out': [8, 16, 32, 64],
+    #     'filter_size': [3, 3, 3, 3],
+    #     'batchnorm': True,
+    #     'n_classes': 2,
+    #     'linear_out': 64
+    # }
+
+    # train(hparams, experiment_name='', experiment_version='unchanged')
+    train(hparams)
+    # TODO rerun with MCI samples

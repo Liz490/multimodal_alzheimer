@@ -363,10 +363,10 @@ if __name__ == "__main__":
     path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     dataset = MultiModalDataset(path=path, modalities=['pet1451', 't1w'], per_scan_norm='min_max')
     print(len(dataset))
-    d = dataset[2]
+    d = dataset[6]
     print(d['pet1451'].shape)
     print(d['mri'].shape)
-    print(d['tabular'])
+    # print(d['tabular'])
     print(d['label'])
     # x, y = dataset[3]
     # print(x.shape)
@@ -378,7 +378,7 @@ if __name__ == "__main__":
     # bins = 100
     # hist = torch.histc(mri_data, bins=bins, min=0, max=1)
     sns.histplot(mri_data.reshape(-1).numpy(), bins=20)
-    plt.savefig('a')
+    plt.savefig('tst')
     # x = range(0,1,0.01)
     # plt.bar(x, hist, align='center')
     # plt.xlabel('Bins)

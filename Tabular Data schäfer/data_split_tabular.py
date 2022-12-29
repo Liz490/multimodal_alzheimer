@@ -21,7 +21,7 @@ def split_tabular():
     schaefer_regions = schaefer_regions.dropna()
     print(schaefer_regions.shape[0])
 
-    with open('../data_set_split.json', 'r') as f:
+    with open('data_set_split.json', 'r') as f:
         dict_split = json.load(f)
 
     #create new split for tabular data
@@ -39,7 +39,7 @@ def split_tabular():
              'val': val.index.values.tolist(),
              'test': test.index.values.tolist(),}
 
-    with open('../data_split_tabular_schaefer.json', 'w') as f:
+    with open('data_split_tabular_schaefer.json', 'w') as f:
         json.dump(split, f)
 
 if __name__ == "__main__":

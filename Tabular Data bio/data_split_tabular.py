@@ -29,7 +29,7 @@ def split_tabular():
              'val': val.index.values.tolist(),
              'test': test.index.values.tolist(),}
 
-    with open('../data_split_tabular_bio.json', 'w') as f:
+    with open('data_split_tabular_bio.json', 'w') as f:
         json.dump(split, f)
 
 

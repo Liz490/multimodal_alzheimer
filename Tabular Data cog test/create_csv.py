@@ -3,7 +3,7 @@ import json
 import pandas as pd
 
 def writeTables():
-    with open('../data_split_tabular.json', 'r') as f:
+    with open('data_split_tabular.json', 'r') as f:
         dict_split = json.load(f)
 
     adni_merged = pd.read_csv('../../Adni_merged.csv').dropna()

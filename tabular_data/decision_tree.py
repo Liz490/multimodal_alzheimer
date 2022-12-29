@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn import metrics
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.preprocessing import LabelEncoder
+import data_preparation
 import matplotlib.pyplot as plt
 
 
@@ -11,13 +11,13 @@ def train_decision_tree(val_data_path, train_data_path, balanced='unbalanced'):
     """Trains a decision tree for tabular data
 
             Args:
-                val_data_path: path to file containins validation data
-                train_data_path: path to file containins training data
+                val_data_path: path to file contains validation data
+                train_data_path: path to file contains training data
                 balanced: indicates whether training is balanced or not
             Returns:
                 Trained decision tree
     """
-    data = get_data(val_data_path, train_data_path)
+    data = data_preparation.get_data(val_data_path, train_data_path)
     x_train, y_train = data[0], data[1]
     x_val, y_val = data[2], data[3]
 
@@ -53,34 +53,6 @@ def predict_mci(path, model):
           f'Share of MCI samples predicted CN: {cn_label/(ad_label+cn_label)} ')
 
 
-def get_data(val_data_path, train_data_path):
-    """retrieves training and validation data in suitable format
-        Args:
-            val_data_path: path to file containins validation data
-            train_data_path: path to file containins training data
-    """
-    val_data = pd.read_csv(val_data_path, sep=',', header=None).to_numpy()
-    train_data = pd.read_csv(train_data_path, sep=',', header=None).to_numpy()
-
-    # Omit index, subject-ID, examdate and label and column names
-    x_train = np.delete(train_data, [0, 1, 2, -1], 1)
-    x_train = np.delete(x_train, 0, axis=0)
-    # Retrieve label
-    y_train = train_data[:, -1]
-    y_train = np.delete(y_train, 0, axis=0)
-
-    x_val = np.delete(val_data, [0, 1, 2, -1], 1)
-    x_val = np.delete(x_val, 0, axis=0)
-    y_val = val_data[:, -1]
-    y_val = np.delete(y_val, 0, axis=0)
-
-    encoded_labels = encode_labels(y_train, y_val)
-    y_val = encoded_labels[0]
-    y_train = encoded_labels[1]
-
-    return x_train, y_train, x_val, y_val
-
-
 def calculate_statistic(y_val, y_train):
     """calculate label distribution for validation and training data
         Args:
@@ -111,19 +83,6 @@ def calculate_statistic(y_val, y_train):
     print(f'class distribution: CN train: {share_cn_train} CN val: {share_cn_val}')
     print(f'class distribution: MCI train: {share_mci_train} MCI val: {share_mci_val}')
     print(f'class distribution: AD train: {share_ad_train} AD val: {share_ad_val}')
-
-
-def encode_labels(y_train, y_val):
-    """Encodes labels (MCI, AD, CN) numerically
-        Args:
-            y_val: labels from validation set
-            y_train: labels from training set
-    """
-    lab_enc = LabelEncoder()
-    lab_enc.fit(y_train)
-    y_val = lab_enc.transform(y_val)
-    y_train = lab_enc.transform(y_train)
-    return y_val, y_train
 
 
 if __name__ == "__main__":

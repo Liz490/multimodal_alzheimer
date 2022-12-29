@@ -3,7 +3,7 @@ import json
 import pandas as pd
 
 def writeTables():
-    with open('../data_split_tabular_schaefer.json', 'r') as f:
+    with open('data_split_tabular_schaefer.json', 'r') as f:
         dict_split = json.load(f)
 
     schaefer_regions = pd.read_csv('../../ADNI_Tau_Amyloid_SUVR_amyloid_tau_status_dems.csv')

@@ -30,7 +30,7 @@ def split_tabular():
              'val': val.index.values.tolist(),
              'test': test.index.values.tolist(),}
 
-    with open('../data_split_tabular.json', 'w') as f:
+    with open('data_split_tabular.json', 'w') as f:
         json.dump(split, f)
 
 if __name__ == "__main__":

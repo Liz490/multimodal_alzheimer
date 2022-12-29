@@ -18,7 +18,7 @@ def split_tabular(columns, path):
                  columns: relevant columns from overall adni table
                  path: path to adni tabular data
     """
-    #read file and drop rows with missing values
+    # read file and drop rows with missing values
     print(os.getcwd())
     adni_merged = pd.read_csv(path)
     print(f'Total number of samples {adni_merged.shape[0]}')
@@ -30,9 +30,9 @@ def split_tabular(columns, path):
 
     adni_merged = adni_merged.drop_duplicates(subset='RID', keep="first")
     adni_merged = adni_merged.set_index('RID')
-    ids = adni_merged[adni_merged.index.isin(dict_split['test']) == False]
+    ids = adni_merged[adni_merged.index.isin(dict_split['test'])]
 
-    test = adni_merged[adni_merged.index.isin(dict_split['test']) == True]
+    test = adni_merged[adni_merged.index.isin(not dict_split['test'])]
     val = ids.sample(frac=0.1, random_state=4381)
     train = ids.drop(val.index)
 
@@ -59,9 +59,9 @@ def write_tables(dsplit_path, adni_path, columns, mci=True, extract_mci=False, n
 
     adni_merged = pd.read_csv(adni_path).dropna(subset=columns)
 
+    columns.insert(0, 'ID')
     for mode in ['train', 'val', 'test']:
         list_ids = dict_split[mode]
-        columns.insert(0, 'ID')
         df_tabular = create_csv(columns, adni_merged, list_ids, mci, extract_mci, normalise)
         path_save = os.path.join(os.getcwd(), f'./{mode}_tabular_data.csv')
         df_tabular.to_csv(path_save)
@@ -99,7 +99,7 @@ def create_csv(columns, adni_merged, list_ids, mci, extract_mci, normalise):
                 if not extract_mci or label == 'MCI':
                     new_row = create_row(normalise, columns, rows_df.iloc[i], subject)
                     df_tabular = df_tabular.append(new_row, ignore_index=True)
-                    #if next session is within 6 months, it is considered 1 examination -> skip results from next session
+                    # if next session is within 6 months, it is considered 1 examination -> skip results from next session
                 if (next_ses - current_ses) < 6:
                     i += 1
             i += 1
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     split_tabular(cols, PATH)
     print('Dataset split performed!')
     '''
-    MCI = True
+    MCI = False
     EXTRACT_MCI = False
     normalise = ['Ventricles', 'Hippocampus', 'WholeBrain', 'Entorhinal', 'Fusiform', 'MidTemp']
     DSPLIT_PATH = 'data_split.json'

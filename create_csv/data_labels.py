@@ -1,3 +1,24 @@
+"""
+Python script that creates a .csv file containing all relevant data and labels for the multi-modal DL task.
+
+Executing the script creates three files in the data folder that contain the inputs and labels for the 
+train, validation and test split according to the ID's listed in 'data_set_split.json':
+    - train_path_data_labels.csv
+    - val_path_data_labels.csv
+    - test_path_data_labels.csv
+Each row in these files corresponds to one single modality (PET, MRI or tabular) and multiple lines can be merged for the multi-modal 
+training if they belong to the same patient and if the data was acquired within a certain amount of time.
+The columns of the dataframe include:
+    - a unique subject ID: ID
+    - a string with the date indicating when the data was acquired: ses
+    - PET modality related data: path_pet1451
+    - MRI modality related data: path_anat, path_anat_mask
+    - tabular data: AGE, PTEDUCAT, Ventricles, Hippocampus, WholeBrain, Entorhinal, Fusiform, MidTemp, ICV
+    - labels: label
+Each row consists of ID, ses and label but only contains data for either one of the three modalities. All the remaining columns
+hold NaN values.
+"""
+
 import os 
 import glob
 import pandas as pd
@@ -7,6 +28,7 @@ import json
 import sys
 import numpy as np
 from torch import threshold
+from typing import Tuple
 #######################################################################
 # TODO:
 #  1) maybe use other split! So far only tabular data of subjects that also have an
@@ -17,45 +39,90 @@ from torch import threshold
 #
 #######################################################################
 
-# number of days that the date of a diagnosis can be away from the date
-# where the mri t1w was taken
-THRESHOLD_DAYS = 150 
-
 # define helper functions
+def get_timedelta_from_string(timestring: str, 
+                            format: str="ses-%Y-%m-%d",
+) -> datetime:
+    """
+    Convert a time in string format to timedelta.
 
-def get_timedelta_from_string(timestring, format="ses-%Y-%m-%d"):
+    Args:
+    timestring: A string that holds date information
+    format: A string that specifies the format of the timestring
+
+    Returns:
+    The converted datetime timedelta object from the string
+    """
     td = datetime.strptime(timestring, format)
     return td
     
+def get_rid_from_id(id_string: str) -> int:
+    """
+    Retrieve the patient ID as int.
 
-def get_rid_from_id(id_string):
+    Args:
+    id_string: A string where the last 4 characters consist of the ID
+
+    Returns:
+    An int obtained from the string
+    """
     id_string = id_string[-4:]
     id_int = int(id_string)
     return id_int
 
+def find_closest_timestamp(date: datetime,
+                         df: pd.DataFrame,
+                         col_name: str='EXAMDATE',
+) -> Tuple[int, int]:
+    """
+    Given a date search for the row in a pd.DataFrame with the smallest temporal difference.
 
-def find_closest_timestamp(date, df):
-    # USERDATE: Date record created
-    # USERDATE2: Date record last updated
-    # EXAMDATE: Examination Date
+    Args:
+    date: A datetime object for which we want to find the closest timestamp
+    df: The DataFrame in which the row with the closest temporal difference is to be found
+    col_name: A string that indicates the name of the column in the DataFrame that holds the date
+
+    Returns:
+    A Tuple that indicates 
+        the temporal difference of the obtained row in days
+        and the index of the row in the DataFrame
+    """
     df_date = df.copy()
-
     # remove NaN values in EXAMDATE column
-    df_date = df_date.dropna(subset='EXAMDATE')
-
-    df_date['EXAMDATE'] = df_date['EXAMDATE'].apply(lambda x: datetime.strptime(x, '%Y-%m-%d'))
-    # calculate the time difference as int
-    df_date['time_diff'] = (date - df_date['EXAMDATE'])
+    df_date = df_date.dropna(subset=col_name)
+    df_date[col_name] = df_date[col_name].apply(lambda x: datetime.strptime(x, '%Y-%m-%d'))
+    # calculate the time difference as int with a new helper column 'time_diff'
+    df_date['time_diff'] = (date - df_date[col_name])
     df_date['time_diff'] = df_date['time_diff'].apply(lambda x: x.days)
     df_date['time_diff'] = df_date['time_diff'].astype(int)
     # we don't care about the sign just relative time distance
     df_date['time_diff'] = df_date['time_diff'].apply(lambda x: np.abs(x))
-    
+
     days, idx = df_date['time_diff'].min(), df_date['time_diff'].idxmin()
     return days, idx
 
+def get_diag(row: pd.Series) -> str:
+    """
+    Convert the diagnosis used in the ADNI database to one of the three class labels used in the task.
+        'DXCURREN' and 'DIAGNOSIS':
+            1=CN, 2=MCI, 3=DEMENTIA
+        'DXCHANGE':
+            1=CN->CN
+            2=MCI->MCI
+            3=DEMENTIA->DEMENTIA
+            4=CN->MCI
+            5=MCI->DEMENTIA
+            6=CN->DEMENTIA
+            7=MCI->CN
+            8=DEMENTIA->MCI
+            9=DEMENTIA->CN
+    
+    Args:
+    row: Pandas Series from which we want to retrieve a label
 
-def get_diag(row):
+    Returns:
+    A string that holds the converted label
+    """
     if (row['DXCURREN']==1) or (row['DXCHANGE']==1) or (row['DXCHANGE']==7) or (row['DXCHANGE']==9) or (row['DIAGNOSIS']==1):
         return 'CN'
     elif (row['DXCURREN']==2) or (row['DXCHANGE']==2) or (row['DXCHANGE']==4) or (row['DXCHANGE']==8) or (row['DIAGNOSIS']==2):
@@ -69,20 +136,28 @@ def get_diag(row):
 # Import csv files that contain label information
 f_tab_adni_tau = pd.read_csv('./data/ADNI_Tau_Amyloid_SUVR_amyloid_tau_status_dems.csv', low_memory=False)
 diagnosis_dxsum = pd.read_csv('/vol/chameleon/projects/adni/Diagnosis/DXSUM_PDXCONV_ADNIALL.csv', low_memory=False)
-# diagnosis_blchange = pd.read_csv('/vol/chameleon/projects/adni/Diagnosis/BLCHANGE.csv', low_memory=False)
-# diagnosis_adsx = pd.read_csv('/vol/chameleon/projects/adni/Diagnosis/ADSXLIST.csv', low_memory=False)
-
 # Import csv file that contains data used for the tabular model
 # Define the relevant features from the tabular data that we want to extract
-relevant_feats_tab = ['RID', 'EXAMDATE', 'Ventricles', 'Hippocampus', 'WholeBrain', 'Entorhinal', 'Fusiform', 'MidTemp', 'ICV', 'AGE', 'PTEDUCAT', 'DX']
+relevant_feats_tab = ['RID', 'EXAMDATE', 'Ventricles', 'Hippocampus', 'WholeBrain', 'Entorhinal', 'Fusiform', 'MidTemp', 'ICV', 'AGE', 'Years_bl', 'PTEDUCAT', 'DX']
 f_tab_data = pd.read_csv('/vol/chameleon/projects/adni/Adni_merged.csv', low_memory=False, usecols=relevant_feats_tab)
+f_tab_data['AGE'] = f_tab_data['AGE'] + f_tab_data['Years_bl']
+f_tab_data = f_tab_data.drop(columns='Years_bl')
+# TO CHECK:
+# print(f_tab_data.head(15))
+# # print(f_tab_data['Years_bl'].isnull().values.any())
+# sys.exit()
+
+
 # convert EXAMDATE column to type timedelta
 f_tab_data['EXAMDATE'] = f_tab_data['EXAMDATE'].apply(lambda x: datetime.strptime(x, '%d/%m/%Y'))
 print('We are dropping all lines in the tabular dataframe where at least one value is missing!!')
-print(f'lines before: {len(f_tab_data)}')
+print(f'number of entries before: {len(f_tab_data)}')
 f_tab_data = f_tab_data.dropna()
-print(f'lines after: {len(f_tab_data)}')
+print(f'number of entries after: {len(f_tab_data)}')
 
+
+# number of days that the date of a diagnosis can be away from the date where the mri t1w was taken
+THRESHOLD_DAYS_MRI = 150 
 
 # open json that holds information about the split
 with open('data_set_split.json', 'r') as f:
@@ -94,7 +169,9 @@ for mode in ['train', 'val', 'test']:
     list_ids = dict_split[mode]
     
     # init df that contains the paths to the image data 
-    data_paths = pd.DataFrame(columns=['ID', 'ses', 'path_pet1451', 'path_anat', 'path_anat_mask', 'label'])
+    data_paths = pd.DataFrame()
+
+    # count non-available samples
     not_available_pet1451 = 0
     not_available_anat = 0
 
@@ -106,7 +183,7 @@ for mode in ['train', 'val', 'test']:
             # get a list with all the modalities that are available for the patient
             modalities = os.listdir(idpath)
 
-            # check for all modalities
+            # check for all three modalities
             
             ###############
             # pet-AV1451  #
@@ -141,10 +218,6 @@ for mode in ['train', 'val', 'test']:
                             data_paths = pd.concat([data_paths, new_row.to_frame().T], ignore_index=True)
                         except:
                             not_available_pet1451 += 1
-
-                        #print(data_paths)
-
-                        
 
             #######################
             #  anat MRI T1w       #
@@ -187,7 +260,7 @@ for mode in ['train', 'val', 'test']:
                             # get the number of days and the row for the closest available diagnosis
                             days, index_subject = find_closest_timestamp(date=session_timedelta, df=df_subject)
                             
-                            if days < THRESHOLD_DAYS:
+                            if days < THRESHOLD_DAYS_MRI:
                                 # extract data for relevant row
                                 row_subject = df_subject.loc[index_subject]
                                 # extract diagnosis
@@ -198,13 +271,13 @@ for mode in ['train', 'val', 'test']:
                                 data_paths = pd.concat([data_paths, new_row.to_frame().T], ignore_index=True)
                             else:
                                 not_available_anat += 1
-
-    # tabular data        
+    #################
+    # tabular data  #
+    #################      
     f_tab_data_mode = f_tab_data[f_tab_data['RID'].isin(list_ids)]    
     f_tab_data_mode = f_tab_data_mode.rename(columns = {'RID': 'ID', 'EXAMDATE': 'ses', 'DX': 'label'})
     data_paths = pd.concat([data_paths, f_tab_data_mode], ignore_index=True)
                         
-
 
     print(f'for {mode} split there are {not_available_pet1451} PET1451 and {not_available_anat} ANAT labels not available!')
     

@@ -1,3 +1,4 @@
+from sqlite3 import Timestamp
 import nibabel as nib
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -9,77 +10,72 @@ import sys
 from torchvision.transforms import ToTensor, Normalize
 import matplotlib.pyplot as plt
 import seaborn as sns
+from typing import List, Dict, Any, Callable, Tuple
 
 pd.options.mode.chained_assignment = None
-
-
-def find_corresponding_samples(df, id, label, min_time, max_time, threshold_days=180):
-        
-    # get subdataframe with same id
-    filt_id_label = (df['ID'] == id) & (df['label'] == label)
-    df = df.loc[filt_id_label]
-
-    if len(df) == 0:
-        return df
-    else:
-    
-    # get timedelta differences
-        df['min'] = df['ses'] - min_time
-        df['min'] = df['min'].apply(lambda x: x.days)
-        df['max'] = max_time - df['ses'] 
-        df['max'] = df['max'].apply(lambda x: x.days)
-        filt_time_diff = (df['min'] <= threshold_days) & (df['max'] <= threshold_days)
-        df = df.loc[filt_time_diff]
-        df = df.drop(columns=['min', 'max'])
-        df = df.reset_index(drop=True)
-        return df
-
-def merge_two_dfs(df1, df2):
-    # df1 is always a row, df2 can be a df of several rows
-    df2['min'] = df1['min_time'] - df2['ses']
-    df2['min'] = df2['min'].apply(lambda x: x.days > 0)
-    df2['max'] = df1['max_time'] - df2['ses']
-    df2['max'] = df2['max'].apply(lambda x: x.days < 0)
-    
-    df2['min_time'] = df1['min_time']
-    df2['min_time'] = df2.apply(lambda x: x['ses'] if x['min'] else x['min_time'], axis=1)
-    df2['max_time'] = df1['max_time']
-    df2['max_time'] = df2.apply(lambda x: x['ses'] if x['max'] else x['max_time'], axis=1)
-
-    df2 = df2.drop(columns=['min', 'max', 'ses'])
-
-    df1_nan = df1.isna()
-    for col2 in df2.columns:
-        if df2[col2].isnull().values.any():
-            if df1_nan[col2] == False: 
-                df2[col2] = df1[col2]
-    return df2
-
 
 # transforms
 # WATCH OUT THIS PERMUTES THE DIMENSIONS OF THE TENSOR
 #to_tensor = ToTensor()
 
 class MultiModalDataset(Dataset):
+    """Dataset class that supports multi-modal training for PET, MRI and tabular data.
+
+    It is possible to pass up to three modalities and samples are generated for all possible combinations 
+    that lie within a certain time interval. Depending on the modality different normalization techniques
+    can be applied such as min-max normalization, min-max normalization based on quantiles, z-score normalization, 
+    etc. For the MRI data, it is possible to apply per-scan normalization based on a brain mask where only brain 
+    voxels are considered. The MultiModalDataset supports 3-class (CN, MCI, Dementia) and binary classification 
+    (CN, Dementia). In addition, weights for the loss function can be computed to account for class imbalances.
+
+    Attributes:
+        path: A string indicating the path to the .csv file containing data and labels
+        binary_classification: A boolean that indicates whether the MCI class is dropped
+            or not
+        modalities: A list of strings containing the names of the modalities that are 
+            desired to be used. Possible strings: 'pet1451', 't1w', 'tabular'
+        days_threshold: An integer indicating how many days can be at most between the 
+            acquisition of data from different modalities to still merge them to the 
+            same sample.
+        transform_pet: ...
+        transform_mri: ...
+        transform_tabular= ...
+        normalize_pet: 
+            A dict with the keys 'std' and 'mean' that correspond to the statistics over the entire split of the PET data
+            or 
+            None
+        normalize_mri: 
+            A dict of length 1 with the key 'per_scan_norm' with 
+                the value 'normalize' if you want to standardize the MRI images per scan only based on the brain voxels
+                or 
+                with the value 'min_max' if you want to map the MRI images into the range [0,1] only based on the brain 
+                voxels
+            or 
+            A dict of length 1 with the key 'all_scan_norm' where the value is again a dict with the keys 'std' and 'mean' 
+            that correspond to the statistics over the entire split of the MRI data
+            or 
+            None
+        quantile: A float that indicates for which percentile the per scan min_max normalization is performed
+                    e.g: quantile=0.99 means that the miniumum value is mapped to the 1 percentile and the maximum is
+                    mapped to the 99 percentile.
+    """
     
     def __init__(self, 
-                path, 
-                modalities=['pet1451', 't1w', 'tabular'],
-                binary_classification=False,
-                days_threshold=180,
+                path: str,
+                binary_classification: bool=False,
+                modalities: List[str]=['pet1451', 't1w', 'tabular'],
+                days_threshold: int=180,
                 transform_pet=None,
                 transform_mri=None,
                 transform_tabular=None,
-                normalize_pet=None,
-                **normalize_mri  # dict with mean and std or 'min_max' (additional percentil arg) or per_scan
+                normalize_pet: Dict[str, float]=None,
+                normalize_mri: Dict[str, Any]=None,
+                quantile: float=0.99, 
                 ):
         """
-        The constructor for MultiModalDataset class.
-  
-        Parameters:
-           path (str): The path to the csv file that holds the paths for all modalities and all labels.   
+        Constructor for the MultiModalDataset class.
         """
-        self.modalities = modalities
+        
         # read the dataframe with all modalities
         self.entire_ds = pd.read_csv(path)
 
@@ -90,8 +86,17 @@ class MultiModalDataset(Dataset):
         else:
             self.label_mapping = {'CN': 0, 'MCI': 1, 'Dementia': 2}
         
+        self.days_threshold = days_threshold
+        # list that will hold dataframes for each individual modality
         self.df_list = []
-        # built reduced dataframe
+
+        self.modalities = modalities
+        # self.modality list contains only correct entries and each modality only once
+        assert(len(self.modalities) in range(1,4))
+        assert(all([x in ['pet1451', 't1w', 'tabular'] for x in self.modalities]))
+        assert(len(set(self.modalities)) == len(self.modalities))
+        
+        # built reduced dataframe depending on entries in self.modalities
         self.ds_combined = pd.DataFrame()
         if 'pet1451' in self.modalities:
             self.df_pet = self.entire_ds.dropna(subset='path_pet1451').reset_index(drop=True)
@@ -108,19 +113,21 @@ class MultiModalDataset(Dataset):
             self.df_list.append(self.df_tab)
             self.ds_combined = pd.concat([self.ds_combined, self.df_tab], ignore_index=True)
         
-    
-
-
         # merge samples from different modalities with same label in a given timeintervals
         if len(self.df_list) == 1:
+            # self.ds is the dataframe that is being used in the end
             self.ds = self.ds_combined
-        
         else:
-            # df_test = pd.read_csv('data/train_path_data_labels.csv', low_memory=False, index_col=0)
             for ds in self.df_list:
                 ds['ses'] = ds['ses'].apply(lambda x: datetime.strptime(x, "%Y-%m-%d"))
-
+            # 1) choose a base dataframe
+            # 2) go over every row 
+            # 3) take the dataframe of the next modality and find all matches
+            # 4) append all matched samples to a new dataframe
+            # 5) this new dataframe is the base dataframe and we go back to step 2)
             df_base = self.df_list[0]
+            # min_time and max_time are used to ensure that new samples are only merged if both are
+            # at most days_threshold away
             df_base['min_time'] = df_base['ses']
             df_base['max_time'] = df_base['ses']
             df_base = df_base.drop(columns='ses')
@@ -128,14 +135,13 @@ class MultiModalDataset(Dataset):
                 df_result_i = pd.DataFrame()
                 for idx, row in df_base.iterrows():
                     df_i = self.df_list[i+1]
-                    df_matching = find_corresponding_samples(df_i, row['ID'], row['label'], row['min_time'], row['max_time'])
-                    # if len(df_matching) >= 2:
-                    #     print('len')
-                    #     print(len(df_matching))
-                    #     print(row)
-                    #     print(df_matching)
-                    # print(row)
-                    # print(df_matching)
+                    df_matching = find_corresponding_samples(df=df_i,
+                                                            id=row['ID'],
+                                                            label=row['label'],
+                                                            min_time=row['min_time'],
+                                                            max_time=row['max_time'],
+                                                            max_days=self.days_threshold,
+                                                            )
                     if len(df_matching) >= 1:
                         df_merged = merge_two_dfs(row, df_matching)
                         df_result_i = pd.concat([df_result_i, df_merged], ignore_index=True)
@@ -152,24 +158,37 @@ class MultiModalDataset(Dataset):
         self.normalize_pet = normalize_pet
         if self.normalize_pet:
             assert 'mean' in self.normalize_pet.keys()
+            assert isinstance(self.normalize_pet['mean'], float) 
             assert 'std' in self.normalize_pet.keys()
+            assert isinstance(self.normalize_pet['std'], float) 
             #(self.normalize_pet.contains_key())
         self.normalize_mri = normalize_mri
+        self.quantile = quantile
         print(self.normalize_mri)
 
-        if len(self.normalize_mri) > 1:
-            print('WARNING: YOU ARE NORMALIZING THE DATA MULTIPLE TIMES! PLEASE ONLY PROVIDE AT MOST ONE KEYWORD ARGUMENT')
-        # if 'per_scan_norm' in self.normalize_mri:
-        #     print('norm')
-        #     print(self.normalize_mri['per_scan_norm'])
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """
+        Compute the length of the dataset
+        """
         return len(self.ds)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Dict[str, Any]:
+        """
+        Build a dictionary of data label pairs depending on the desired modalities
+
+        Args:
+        index: An integer indicating the index of the sample
+
+        Returns:
+        A dictionary with the following keys:
+            'label': A torch.tensor according to the label mapping
+            'pet1451': A torch.tensor with the PET data or None if not available
+            'mri': A torch.tensor with the MRI data or None if not available
+            'tabular': A torch.tensor with the tabular data or None if not available
+        """
         data = {}
         sample = self.ds.iloc[index]
-        print(sample)
         ########
         # PET  #
         ########
@@ -193,67 +212,66 @@ class MultiModalDataset(Dataset):
         ###########
         # MRI T1W #
         ###########
-
+        # load data and mask
         path_mri = sample['path_anat']
         path_mri_mask = sample['path_anat_mask']
-        # print(path_mri)
-        # print(path_mri_mask)
         if path_mri == None:
             mri_data = None
         else:
             mri_im = nib.load(path_mri)
             mri_data = mri_im.get_fdata()
-            # sns.histplot(mri_data.reshape(-1))
-            # plt.savefig('a')
-            
-            
+        
             if self.transform_mri:
                 mri_data = self.transform_mri(mri_data)
-            #print(mri_data.shape)
+    
             mri_data = torch.tensor(mri_data)
 
-            if 'per_scan_norm' in self.normalize_mri:
-                mri_mask = nib.load(path_mri_mask)
-                binary_mask_mri = mri_mask.get_fdata()
-                binary_mask_mri = torch.tensor(binary_mask_mri)
+            if self.normalize_mri:
+                assert isinstance(self.normalize_mri, dict)
+                assert len(self.normalize_mri) == 1
+                if 'per_scan_norm' in self.normalize_mri:
+                    mri_mask = nib.load(path_mri_mask)
+                    binary_mask_mri = mri_mask.get_fdata()
+                    binary_mask_mri = torch.tensor(binary_mask_mri)
 
-                print(mri_data.shape)
-                print(binary_mask_mri.shape)
-                # 1. set non-brain voxels to 0 
-                data_masked_mri = mri_data * binary_mask_mri
-        
-                # 2. flatten the tensor and remove all zero entries
-                data_masked_mri = data_masked_mri.reshape(-1)
-                data_masked_mri = data_masked_mri[data_masked_mri.nonzero()]
-                
+                    # 1. set non-brain voxels to 0 
+                    data_masked_mri = mri_data * binary_mask_mri
+            
+                    # 2. flatten the tensor and remove all zero entries
+                    data_masked_mri = data_masked_mri.reshape(-1)
+                    data_masked_mri = data_masked_mri[data_masked_mri.nonzero()]
+                    
 
-                if self.normalize_mri['per_scan_norm'] == 'normalize':
-                    # 3. compute mean and std
-                    std_mask_mri, mean_mask_mri = torch.std_mean(data_masked_mri)
+                    if self.normalize_mri['per_scan_norm'] == 'normalize':
+                        # 3. compute mean and std
+                        std_mask_mri, mean_mask_mri = torch.std_mean(data_masked_mri)
 
-                    normalize_per_scan_mri = Normalize(mean=mean_mask_mri, std=std_mask_mri,)
-                    mri_data = normalize_per_scan_mri(mri_data)
+                        normalize_per_scan_mri = Normalize(mean=mean_mask_mri, std=std_mask_mri,)
+                        mri_data = normalize_per_scan_mri(mri_data)
 
-                    # 4. Multiply normalized data again with brain mask
-                    mri_data *= binary_mask_mri
+                        # 4. Multiply normalized data again with brain mask
+                        mri_data *= binary_mask_mri
+                    elif self.normalize_mri['per_scan_norm'] == 'min_max':
+                        assert self.quantile >= 0 and self.quantile <= 1
+                        quant_max = torch.quantile(data_masked_mri, self.quantile, interpolation='linear')
+                        quant_min = torch.quantile(data_masked_mri, 1-self.quantile, interpolation='linear')
+
+                        mri_data = (mri_data - quant_min) / (quant_max - quant_min)
+                        mri_data[mri_data > 1] = 1
+                        mri_data[mri_data < 0] = 0
+
+                        mri_data *= binary_mask_mri
+                    else:
+                        raise ValueError('If you want to normalize per scan you have to pass either "normalize" or "min_max"')
+
+                elif 'all_scan_norm' in self.normalize_mri:
+                    assert 'mean' in self.normalize_mri['all_scan_norm'].keys()
+                    assert 'std' in self.normalize_mri['all_scan_norm'].keys()
+                    all_scan_normalize_mri = Normalize(mean=self.normalize_mri['all_scan_norm']['mean'], std=self.normalize_mri['all_scan_norm']['std'])
+                    mri_data = all_scan_normalize_mri(mri_data)
+
                 else:
-                    q = 0.99
-                    quant_max = torch.quantile(data_masked_mri, q, interpolation='linear')
-                    quant_min = torch.quantile(data_masked_mri, 1-q, interpolation='linear')
-
-                    mri_data = (mri_data - quant_min) / (quant_max - quant_min)
-                    mri_data[mri_data > 1] = 1
-                    mri_data[mri_data < 0] = 0
-
-                    mri_data *= binary_mask_mri
-
-            elif 'all_scan_norm' in self.normalize_mri:
-                assert 'mean' in self.normalize_mri['all_scan_norm'].keys()
-                assert 'std' in self.normalize_mri['all_scan_norm'].keys()
-                normalize_mri = Normalize(mean=self.normalize_mri['all_scan_norm']['mean'], std=self.normalize_pet['all_scan_norm']['std'])
-                pet_data = normalize_pet(pet_data)
-
-                
+                    raise ValueError('If you use the argument "normalize_mri" only "per_scan_norm" or "all_scan_norm" are allowed as keys!')
        
 
         data['mri'] = mri_data
@@ -285,7 +303,16 @@ class MultiModalDataset(Dataset):
         data = {k: v for k, v in data.items() if v is not None}
         return data
 
-    def get_label_distribution(self):
+    def get_label_distribution(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Computes the frequency of class ocurrences
+
+        Returns:
+        A tuple of torch tensors with:
+            the absolute frequency of each class occurance
+            and
+            the normalized class occurances such that they add up to 1
+        """
         counts_normalized = self.ds['label'].value_counts(normalize=True)
         if self.binary_classification:
             counts_normalized = counts_normalized.reindex(index = ['CN', 'Dementia'])
@@ -299,69 +326,107 @@ class MultiModalDataset(Dataset):
         
         return torch.tensor(counts), torch.tensor(counts_normalized)
 
-    
-label_mapping = {'CN': 0, 'MCI': 1, 'Dementia': 2}
 
-class PETAV1451Dataset(Dataset):
-    def __init__(self, path, transform=None, balanced=False):
-        self.transform = transform
-        self.ds = pd.read_csv(path)
-        if balanced:
-            self.ds = self.balance_ds()
-            self.ds = self.ds.reset_index()
-            
+def find_corresponding_samples(df: pd.DataFrame,
+                            id: str,
+                            label: str,
+                            min_time: pd.Timestamp,
+                            max_time: pd.Timestamp,
+                            max_days: int=180,
+) -> pd.DataFrame:
+    """
+    Finds all samples in a DataFrame that can be fused with another sample.
 
-    def __len__(self):
-        return len(self.ds)
+    This sample is characterized by the remaining arguments of the function
 
-    def __getitem__(self, index):
-        path_idx = self.ds.loc[index, 'path']
-        im = nib.load(path_idx)
-        data = im.get_fdata()
-        if self.transform:
-            data = self.transform(data)
+    Args:
+    df: A dataframe in which corresponding samples are searched based on several conditions
+    id: A string that indicates the ID the dataframe is filtered by
+    label: A string that indicates the label the dataframe is filtered by
+    min_time: A timestamp that indicates the earliest timestamp of all datasamples that have been
+        fused so far
+    max_time: A timestamp that indicates the latest timestamp of all datasamples that have been
+        fused so far
+    max_days: the maximum number of days that all samples that need to be fused can be apart from
+        each other
 
+    Returns:
+    A reduced dataframe with all samples that can be fused
 
-        label = self.ds.loc[index, 'label']
-        label = label_mapping[label]
-        label = torch.tensor(label)
-        return data, label
-        #return super().__getitem__(index)
+    Example:
+        We have already fused a sample of the MRI modality with one of the PET modality. MRI data was
+        acquired on 2018-02-02 (min_time) and PET data was obtained on 2018-01-25 (max_time). Next, the
+        dataframe that contains tabular data is queried for data with the same ID and the same label. 
+        Among all these samples we try to fuse the data such that the date of the new sample, min_time and
+        max_time are at most max_days (e.g: 180) apart from each other.
+    """
+    filt_id_label = (df['ID'] == id) & (df['label'] == label)
+    df = df.loc[filt_id_label]
+    if len(df) == 0:
+        return df
+    else:
+        # get timedelta differences in days
+        df['min'] = df['ses'] - min_time
+        df['min'] = df['min'].apply(lambda x: x.days)
+        df['max'] = max_time - df['ses'] 
+        df['max'] = df['max'].apply(lambda x: x.days)
+        # 1) df['ses'] - min_time is positive if df['ses'] is larger and should be at most max_days away
+        # 2) max_time - df['ses']  is positive if df['ses'] is smaller and should be at most max_days away
+        filt_time_diff = (df['min'] <= max_days) & (df['max'] <= max_days)
+        df = df.loc[filt_time_diff]
+        df = df.drop(columns=['min', 'max'])
+        df = df.reset_index(drop=True)
+        return df
 
-#TODO: use label mappings to ensure the correct weights are used
-    def get_label_distribution(self):
-        counts_normalized = self.ds['label'].value_counts(normalize=True)
-        counts = self.ds['label'].value_counts()
-        return torch.tensor(counts), torch.tensor(counts_normalized)
+def merge_two_dfs(df1: pd.Series, df2: pd.DataFrame) -> pd.DataFrame:
+    """
+    Combine data from two dataframes.
 
-    def balance_ds(self):
-        filt_ad = self.ds['label'] == 'Dementia'
-        df_ad = self.ds.loc[filt_ad]
-        ad_idx = df_ad.index
-        num_samples = len(df_ad)
+    Args:
+    df1: A Series representing a sample of the modalities that have already been fused
+    df2: A DataFrame representing all samples of the new modality that can 
+        be fused with the sample in df1
 
-        filt_mci = self.ds['label'] == 'MCI'
-        df_mci = self.ds.loc[filt_mci]
-        df_mci = df_mci.sample(n=num_samples, random_state=1)
-        mci_idx = df_mci.index
-       
-        filt_cn = self.ds['label'] == 'CN'
-        df_cn = self.ds.loc[filt_cn]
-        df_cn = df_cn.sample(n=num_samples, random_state=1)
-        cn_idx = df_cn.index
+    Returns:
+    A DataFrame that holds the combined information of all modalities that have been fused so far
 
-        combined_idx = ad_idx.union(mci_idx).union(cn_idx)
-        
-        return self.ds.loc[combined_idx]
+    Example:
+        df1 is a Series of a sample with only PET data, thus it has NaN data for all columns that 
+        are related to MRI or tabular data. df2 is a DataFrame of samples with MRI data that can 
+        be merged to the sample of PET data. Thus df2 has data for 'path_anat' or 'path_anat_mask' 
+        but NaN values in the column 'path_pet1451'. Now, df2 is checked for NaN columns and if 
+        there is data available in df1 for that column, it is written to df2 which will then be the 
+        merged dataframe.
+    """
+    # update 'min_time' and 'max_time' of the merged dataframe
+    df2['min'] = df1['min_time'] - df2['ses']
+    df2['min'] = df2['min'].apply(lambda x: x.days > 0)
+    df2['max'] = df1['max_time'] - df2['ses']
+    df2['max'] = df2['max'].apply(lambda x: x.days < 0)
+    df2['min_time'] = df1['min_time']
+    df2['min_time'] = df2.apply(lambda x: x['ses'] if x['min'] else x['min_time'], axis=1)
+    df2['max_time'] = df1['max_time']
+    df2['max_time'] = df2.apply(lambda x: x['ses'] if x['max'] else x['max_time'], axis=1)
+
+    df2 = df2.drop(columns=['min', 'max', 'ses'])
+
+    # if df2 has NaN for PET but df1 has PET data, it is written in the corresponding column of df2
+    df1_nan = df1.isna()
+    for col2 in df2.columns:
+        if df2[col2].isnull().values.any():
+            if df1_nan[col2] == False: 
+                df2[col2] = df1[col2]
+    return df2
+
 
 if __name__ == "__main__":
 
 
     # normalize_pet: None or dict with 'mean' and 'std'
-
-    norm_mri = 3
+    std_all_scans = {'mean': 9.8, 'std': 8.2}
+    norm_mri = {'all_scan_norm': std_all_scans}
     path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-    dataset = MultiModalDataset(path=path, modalities=['pet1451', 't1w'], per_scan_norm='min_max')
+    dataset = MultiModalDataset(path=path, modalities=['pet1451', 't1w', 'tabular'], normalize_mri=norm_mri)
     print(len(dataset))
     d = dataset[6]
     print(d['pet1451'].shape)

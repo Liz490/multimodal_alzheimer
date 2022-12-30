@@ -438,7 +438,7 @@ if __name__ == "__main__":
     std_all_scans = {'mean': 9.8, 'std': 8.2}
     norm_mri = {'all_scan_norm': std_all_scans}
     path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-    dataset = MultiModalDataset(path=path, modalities=['pet1451', 't1w', 'tabular'], normalize_mri=norm_mri)
+    dataset = MultiModalDataset(path=path, modalities=['t1w'], normalize_mri=norm_mri)
     print(len(dataset))
     d = dataset[6]
     print(d['pet1451'].shape)

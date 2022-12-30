@@ -32,9 +32,9 @@ def split_tabular(columns, path):
 
     adni_merged = adni_merged.drop_duplicates(subset='RID', keep="first")
     adni_merged = adni_merged.set_index('RID')
-    ids = adni_merged[adni_merged.index.isin(dict_split['test'])]
+    ids = adni_merged[adni_merged.index.isin(not dict_split['test'])]
 
-    test = adni_merged[adni_merged.index.isin(not dict_split['test'])]
+    test = adni_merged[adni_merged.index.isin(dict_split['test'])]
     val = ids.sample(frac=0.1, random_state=4381)
     train = ids.drop(val.index)
 

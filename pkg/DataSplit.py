@@ -10,8 +10,11 @@ def split_tabular(path):
         - path: path to file that contains all data samples
     """
     adni = pd.read_csv(path, low_memory=False)
-    adni.dropna(subset=['DX'], inplace=True)
+    # print(len(adni))
+    # adni.dropna(subset=['DX'], inplace=True)
+    # print(len(adni))
     ids = adni['RID'].drop_duplicates()
+    print(len(ids))
     test = ids.sample(frac=0.1, random_state=3551)
     ids = ids.drop(test.index)
     val = ids.sample(frac=0.1, random_state=4381)

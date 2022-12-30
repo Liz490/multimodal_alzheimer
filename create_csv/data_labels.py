@@ -33,8 +33,7 @@ from typing import Tuple
 # TODO:
 #  1) maybe use other split! So far only tabular data of subjects that also have an
 #     image modality in data_bids_processed are considered
-#  2) MISSING VALUES are simply dropped in case of tabular data
-#  3) Ages are still wrong in tabular data!!!
+#  
 #
 #
 #######################################################################
@@ -144,7 +143,7 @@ f_tab_data['AGE'] = f_tab_data['AGE'] + f_tab_data['Years_bl']
 f_tab_data = f_tab_data.drop(columns='Years_bl')
 # TO CHECK:
 # print(f_tab_data.head(15))
-# # print(f_tab_data['Years_bl'].isnull().values.any())
+# # # print(f_tab_data['Years_bl'].isnull().values.any())
 # sys.exit()
 
 

@@ -281,11 +281,23 @@ class MultiModalDataset(Dataset):
         ###########
         # TABULAR #
         ########### 
-        age = sample['AGE']
-        if age == None:
+
+        if sample['AGE'] == None:
             tabular_data = None
         else:
-            tabular_data = torch.tensor(5)
+            # ICV
+            icv = sample['ICV']
+            # features normalized 
+            age = sample['AGE'] / icv
+            pteducat = sample['PTEDUCAT'] / icv
+            ventr = sample['Ventricles'] / icv
+            hippocamp = sample['Hippocampus'] / icv
+            whole_brain = sample['PTEDUCAT'] / icv
+            entorhinal = sample['Entorhinal'] / icv
+            fusiform = sample['Fusiform'] / icv
+            mid_temp = sample['MidTemp'] / icv
+
+            tabular_data = torch.tensor([age, pteducat, ventr, hippocamp, whole_brain, entorhinal, fusiform, mid_temp])
 
         data['tabular'] = tabular_data
         # STILL TODO!!!!!
@@ -431,13 +443,13 @@ if __name__ == "__main__":
     d = dataset[6]
     print(d['pet1451'].shape)
     print(d['mri'].shape)
-    # print(d['tabular'])
+    print(d['tabular'])
     print(d['label'])
     # x, y = dataset[3]
     # print(x.shape)
     # print(y)
     mri_data = d['mri']
-    print(mri_data[55,55,55])
+    # print(mri_data[55,55,55])
     # print(mri_data.min())
     # print(mri_data.max())
     # bins = 100

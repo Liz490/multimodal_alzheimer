@@ -164,7 +164,7 @@ class MultiModalDataset(Dataset):
             #(self.normalize_pet.contains_key())
         self.normalize_mri = normalize_mri
         self.quantile = quantile
-        print(self.normalize_mri)
+        
 
 
     def __len__(self) -> int:
@@ -433,37 +433,54 @@ def merge_two_dfs(df1: pd.Series, df2: pd.DataFrame) -> pd.DataFrame:
 
 if __name__ == "__main__":
 
+    trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
+    valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
-    # normalize_pet: None or dict with 'mean' and 'std'
-    std_all_scans = {'mean': 9.8, 'std': 8.2}
-    norm_mri = {'all_scan_norm': std_all_scans}
-    path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-    dataset = MultiModalDataset(path=path, modalities=['t1w'], normalize_mri=norm_mri)
-    print(len(dataset))
-    d = dataset[6]
-    print(d['pet1451'].shape)
-    print(d['mri'].shape)
-    print(d['tabular'])
-    print(d['label'])
-    # x, y = dataset[3]
-    # print(x.shape)
-    # print(y)
-    mri_data = d['mri']
-    # print(mri_data[55,55,55])
-    # print(mri_data.min())
-    # print(mri_data.max())
-    # bins = 100
-    # hist = torch.histc(mri_data, bins=bins, min=0, max=1)
-    sns.histplot(mri_data.reshape(-1).numpy(), bins=20)
-    plt.savefig('tst')
-    # x = range(0,1,0.01)
-    # plt.bar(x, hist, align='center')
-    # plt.xlabel('Bins)
-    # plt.show()
+    # how to use for PET
+    normalization_pet = {'mean': 0.5145, 'std': 0.5383}
+    trainset_pet = MultiModalDataset(path=trainpath, modalities=['pet1451'], normalize_pet=normalization_pet)
+    data_label_pet = trainset_pet[0]
+    print(data_label_pet['pet1451'].shape)
+    print(data_label_pet['label'])
+
+    # how to use for MRI
+    normalization_mri = {'per_scan_norm': 'min_max'}
+    trainset_mri = MultiModalDataset(path=trainpath, modalities=['t1w'], normalize_mri=normalization_mri, quantile=0.97)
+    data_label_mri = trainset_mri[0]
+    print(data_label_mri['mri'].shape)
+    print(data_label_mri['label'])
+
+    # how to use for tabular
+    trainset_tabular = MultiModalDataset(path=trainpath, modalities=['tabular'])
+    data_label_tabular = trainset_tabular[0]
+    print(data_label_tabular['tabular'])
+    print(data_label_tabular['label'])
 
 
 
-    
-
-
-    
+    # # normalize_pet: None or dict with 'mean' and 'std'
+    # std_all_scans = {'mean': 9.8, 'std': 8.2}
+    # norm_mri = {'all_scan_norm': std_all_scans}
+    # path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
+    # dataset = MultiModalDataset(path=path, modalities=['t1w'], normalize_mri=norm_mri)
+    # print(len(dataset))
+    # d = dataset[6]
+    # print(d['pet1451'].shape)
+    # print(d['mri'].shape)
+    # print(d['tabular'])
+    # print(d['label'])
+    # # x, y = dataset[3]
+    # # print(x.shape)
+    # # print(y)
+    # mri_data = d['mri']
+    # # print(mri_data[55,55,55])
+    # # print(mri_data.min())
+    # # print(mri_data.max())
+    # # bins = 100
+    # # hist = torch.histc(mri_data, bins=bins, min=0, max=1)
+    # sns.histplot(mri_data.reshape(-1).numpy(), bins=20)
+    # plt.savefig('tst')
+    # # x = range(0,1,0.01)
+    # # plt.bar(x, hist, align='center')
+    # # plt.xlabel('Bins)
+    # # plt.show()

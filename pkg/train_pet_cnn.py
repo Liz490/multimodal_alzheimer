@@ -16,8 +16,10 @@ EXPERIMENT_NAME = 'optuna_two_class'
 EXPERIMENT_VERSION = None
 
 
-class MetricTracker(Callback):
+class ValidationLossTracker(Callback):
     """
+    Tracks validation loss per epoch across epochs
+
     See
     https://stackoverflow.com/questions/69276961/how-to-extract-loss-and-accuracy-from-logger-by-each-epoch-in-pytorch-lightning"""
 
@@ -161,7 +163,7 @@ def train(hparams,
         name=experiment_name,
         version=experiment_version)
 
-    mt_cb = MetricTracker()
+    val_loss_tracker = ValidationLossTracker()
     trainer = pl.Trainer(
         max_epochs=hparams['max_epochs'],
         logger=tb_logger,
@@ -173,12 +175,12 @@ def train(hparams,
                 monitor='val_loss',
                 mode='min',
                 patience=hparams['early_stopping_patience']),
-            mt_cb
+            val_loss_tracker
         ]
     )
 
     trainer.fit(model, trainloader, valloader)
-    return mt_cb.val_loss[-1]
+    return val_loss_tracker.val_loss[-1]
 
 
 def optuna_optimization():

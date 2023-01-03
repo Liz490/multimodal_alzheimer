@@ -106,7 +106,8 @@ class Small_PET_CNN(pl.LightningModule):
         torch.save(self, path)
 
     def general_step(self, batch, batch_idx, mode):
-        (x, y) = batch
+        x = batch['pet1451']
+        y = batch['label']
         x = x.unsqueeze(1)
         x = x.to(dtype=torch.float32)
         y_hat = self.forward(x).to(dtype=torch.double)

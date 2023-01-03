@@ -9,6 +9,7 @@ import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import Callback
+from dataloader import MultiModalDataset
 
 LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'optuna_two_class'
@@ -120,24 +121,23 @@ def train(hparams,
     pl.seed_everything(5, workers=True)
 
     # TRANSFORMS
-    transform = Compose([
-        ToTensor(),
-        Normalize(mean=hparams['norm_mean'], std=hparams['norm_std'])
-    ])
+    normalization_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']}
 
     # DATASET AND DATALOADER
-    trainpath = os.path.join(os.getcwd(), 'data/train_path_data_petav1451.csv')
-    valpath = os.path.join(os.getcwd(), 'data/val_path_data_petav1451.csv')
+    trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
+    valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
     remove_mci = hparams["n_classes"] == 2
-    trainset = PETAV1451Dataset(path=trainpath,
-                                transform=transform,
-                                balanced=False,
-                                remove_mci=remove_mci)
-    valset = PETAV1451Dataset(path=valpath,
-                              transform=transform,
-                              balanced=False,
-                              remove_mci=remove_mci)
+    trainset = MultiModalDataset(path=trainpath, 
+                                modalities=['pet1451'],
+                                normalize_pet=normalization_pet,
+                                binary_classification=True)
+    valset = MultiModalDataset(path=valpath,
+                            modalities=['pet1451'],
+                            normalize_pet=normalization_pet,
+                            binary_classification=True)
+
+
 
     trainloader = DataLoader(
         trainset,

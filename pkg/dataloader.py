@@ -80,7 +80,8 @@ class MultiModalDataset(Dataset):
         self.entire_ds = pd.read_csv(path)
 
         # remove MCI labels if desired
-        if binary_classification:
+        self.binary_classification = binary_classification
+        if self.binary_classification:
             self.entire_ds = self.entire_ds[self.entire_ds['label'] != 'MCI']
             self.label_mapping = {'CN': 0, 'Dementia': 1}
         else:

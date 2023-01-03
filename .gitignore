@@ -4,6 +4,7 @@ figures/
 MedicalNet/
 lightning_logs/
 kfold_checkpoints/
+.tensorboard-info/
 
 
 # IDEs

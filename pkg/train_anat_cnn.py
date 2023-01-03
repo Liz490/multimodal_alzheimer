@@ -145,11 +145,11 @@ def train(hparams,
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
     trainset = MultiModalDataset(
-        path=trainpath, modalities=['t1w'], per_scan_norm='min_max',
-        binary_classification=True, q=hparams['norm_percentile'])
+        path=trainpath, modalities=['t1w'], normalize_mri={'per_scan_norm': 'min_max'},
+        binary_classification=True, quantile=hparams['norm_percentile'])
     valset = MultiModalDataset(
-        path=valpath, modalities=['t1w'], per_scan_norm='min_max',
-        binary_classification=True, q=hparams['norm_percentile'])
+        path=valpath, modalities=['t1w'], normalize_mri={'per_scan_norm': 'min_max'},
+        binary_classification=True, quantile=hparams['norm_percentile'])
 
     trainloader = DataLoader(
         trainset,

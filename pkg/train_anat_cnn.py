@@ -16,7 +16,7 @@ import math
 from pkg.train_pet_cnn import MetricTracker
 
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'optuna_mri_two_class'
+EXPERIMENT_NAME = 'optuna_mri_two_class_var_resnet'
 EXPERIMENT_VERSION = None
 
 
@@ -31,7 +31,8 @@ def optuna_just_sampling(trial):
         'norm_std_train': 918.5371,
         'norm_mean_val': 418.4120,
         'norm_std_val': 830.2466,
-        'n_classes': 2
+        'n_classes': 2,
+        'gpu_id': 6,
     }
 
     # Define hyperparameter options
@@ -84,6 +85,7 @@ def optuna_just_sampling(trial):
     lr_pretrained_max = 1e-5
     q_options = [0.95, 0.98, 0.99, 1]
     gamma_options = [None, 1, 2, 5]
+    resnet_options = [10, 18, 50]
 
     # Let optuna configure hyperparameters based on options defined above
     hparams['lr'] = trial.suggest_float(
@@ -120,6 +122,7 @@ def optuna_just_sampling(trial):
     hparams['norm_percentile'] = trial.suggest_categorical('norm_percentile',
                                                            q_options)
     hparams['fl_gamma'] = trial.suggest_categorical('fl_gamma', gamma_options)
+    hparams['resnet_depth'] = trial.suggest_categorical('resnet_depth', resnet_options)
 
     # Train network
     try:
@@ -196,12 +199,13 @@ def train(hparams,
 
 def optuna_optimization():
     study = optuna.create_study(direction="minimize")
-    # study.optimize(optuna_just_sampling, n_trials=300, timeout=86400)
-    study.optimize(optuna_just_sampling, n_trials=300, timeout=86400)
+    day = 86400
+    study.optimize(optuna_just_sampling, n_trials=400, timeout=7*day)
 
 
 if __name__ == '__main__':
     optuna_optimization()
+
     # hparams = {
     #     'early_stopping_patience': 5,
     #     'max_epochs': 20,
@@ -220,8 +224,11 @@ if __name__ == '__main__':
     #     # 'batchnorm_conv': True,
     #     'batchnorm_dense': True,
     #     'l2_reg': 1e-2,
-    #     'linear_out': [256, 256, 256],
-    #     'norm_percentile': 0.99
+    #     # 'linear_out': [256, 256, 256],
+    #     'linear_out': [],
+    #     'norm_percentile': 0.99,
+    #     'resnet_depth': 18,
+    #     'gpu_id': 6,
     # }
 
     # train(hparams)

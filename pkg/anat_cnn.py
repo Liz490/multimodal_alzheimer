@@ -41,26 +41,35 @@ class Anat_CNN(pl.LightningModule):
         else:
             self.label_ind_by_names = {'CN': 0, 'AD': 1}
 
-        
         # Initialize Model
         opts = parse_opts()
-        opts.pretrain_path = '/vol/chameleon/projects/adni/adni_1/MedicalNet/pretrain/resnet_50_23dataset.pth'
-        opts.gpu_id = [6]
+        opts.pretrain_path = f'/vol/chameleon/projects/adni/adni_1/MedicalNet/pretrain/resnet_{hparams["resnet_depth"]}_23dataset.pth'
+        opts.gpu_id = [hparams["gpu_id"]]
         opts.input_W = 91
         opts.input_H = 91
         opts.input_D = 109
-        
+        opts.model_depth = hparams["resnet_depth"]
+
         resnet, _ = generate_model(opts)
         self.model = resnet.module
 
         modules = nn.ModuleList()
 
+        match hparams["resnet_depth"]:
+            case 10:
+                n_in = 512
+            case 18:
+                n_in = 512
+            case 50:
+                n_in = 2048
+            case _:
+                raise ValueError("hparams['resnet_depth'] is not in [10, 18, 34, 50]")
+
         # batchnorm after resnet block or not
         if "batchnorm_begin" in hparams and hparams["batchnorm_begin"]:
-            modules.append(nn.BatchNorm3d(2048))
+            modules.append(nn.BatchNorm3d(n_in))
 
         # add conv layers if list is not empty
-        n_in = 2048
         if 'conv_out' in hparams:
             for n_out, filter_size in zip(self.hparams["conv_out"],
                                         self.hparams["filter_size"]):

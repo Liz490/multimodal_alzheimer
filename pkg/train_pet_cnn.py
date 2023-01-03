@@ -2,7 +2,6 @@ import os
 import torch
 import math
 from pathlib import Path
-from dataloader import PETAV1451Dataset
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
 from pet_cnn import Small_PET_CNN, Random_Benchmark_All_CN

@@ -431,6 +431,9 @@ def merge_two_dfs(df1: pd.Series, df2: pd.DataFrame) -> pd.DataFrame:
     return df2
 
 
+    def remove_mci(self):
+        self.ds = self.ds.loc[self.ds['label'] != 'MCI']
+
 if __name__ == "__main__":
 
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')

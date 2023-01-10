@@ -125,6 +125,12 @@ def train(hparams,
     # TRANSFORMS
     normalization_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']}
 
+    assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
+    if hparams['n_classes'] == 2:
+        binary_classification=True
+    else:
+        binary_classification=False
+
     # DATASET AND DATALOADER
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
@@ -133,11 +139,11 @@ def train(hparams,
     trainset = MultiModalDataset(path=trainpath, 
                                 modalities=['pet1451'],
                                 normalize_pet=normalization_pet,
-                                binary_classification=True)
+                                binary_classification=binary_classification)
     valset = MultiModalDataset(path=valpath,
                             modalities=['pet1451'],
                             normalize_pet=normalization_pet,
-                            binary_classification=True)
+                            binary_classification=binary_classification)
 
 
 

@@ -159,16 +159,22 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
     """
     pl.seed_everything(15, workers=True)
 
+    assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
+    if hparams['n_classes'] == 2:
+        binary_classification=True
+    else:
+        binary_classification=False
+
     # Setup datasets and dataloaders
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
     trainset = MultiModalDataset(
         path=trainpath, modalities=['t1w'], normalize_mri={'per_scan_norm': 'min_max'},
-        binary_classification=True, quantile=hparams['norm_percentile'])
+        binary_classification=binary_classification, quantile=hparams['norm_percentile'])
     valset = MultiModalDataset(
         path=valpath, modalities=['t1w'], normalize_mri={'per_scan_norm': 'min_max'},
-        binary_classification=True, quantile=hparams['norm_percentile'])
+        binary_classification=binary_classification, quantile=hparams['norm_percentile'])
 
     trainloader = DataLoader(
         trainset,
@@ -282,4 +288,4 @@ if __name__ == '__main__':
         'gpu_id': 6,
     }
 
-    train_anat(hparams, experiment_name='')
+    train_anat(hparams)

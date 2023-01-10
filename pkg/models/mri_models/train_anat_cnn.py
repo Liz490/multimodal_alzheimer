@@ -2,7 +2,7 @@ import os
 import torch
 from pkg.utils.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
-from anat_cnn import Anat_CNN
+from pkg.models.mri_models.anat_cnn import Anat_CNN
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -163,25 +163,16 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
     """
     pl.seed_everything(15, workers=True)
 
-    # CALLBACKS
-    lr_monitor = LearningRateMonitor(logging_interval='epoch')
-
-    assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
-    if hparams['n_classes'] == 2:
-        binary_classification=True
-    else:
-        binary_classification=False
-
     # Setup datasets and dataloaders
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
     trainset = MultiModalDataset(
         path=trainpath, modalities=['t1w'], normalize_mri={'per_scan_norm': 'min_max'},
-        binary_classification=binary_classification, quantile=hparams['norm_percentile'])
+        binary_classification=True, quantile=hparams['norm_percentile'])
     valset = MultiModalDataset(
         path=valpath, modalities=['t1w'], normalize_mri={'per_scan_norm': 'min_max'},
-        binary_classification=binary_classification, quantile=hparams['norm_percentile'])
+        binary_classification=True, quantile=hparams['norm_percentile'])
 
     trainloader = DataLoader(
         trainset,
@@ -199,7 +190,6 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
     # Get class distribution of the trainset for weighted loss
     _, weight_normalized = trainset.get_label_distribution()
     hparams['loss_class_weights'] = 1 - weight_normalized
-    hparams['loss_class_weights_human_readable'] = hparams['loss_class_weights'].tolist()  # original hparam is a Tensor that isn't stored in human readable format
 
     model = Anat_CNN(hparams=hparams)
 
@@ -218,13 +208,11 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
         devices=1,
         callbacks=[
             EarlyStopping(
-                monitor='val_loss_epoch',
+                monitor='val_loss',
                 mode='min',
                 patience=hparams['early_stopping_patience']
             ),
-            val_loss_tracker,
-            lr_monitor,
-            ModelCheckpoint(monitor='val_loss_epoch')
+            val_loss_tracker
         ]
     )
 
@@ -247,7 +235,7 @@ if __name__ == '__main__':
     # optuna_optimization()
     #####################
 
-    # Best checkpoint 2 class version 44 
+    # Best checkpoint 2 class version 44
     hparams = {
         'early_stopping_patience': 30,
         'max_epochs': 300,
@@ -270,4 +258,4 @@ if __name__ == '__main__':
         'reduce_factor_lr_schedule': 0.5
     }
 
-    train_anat(hparams, experiment_name='best_runs', experiment_version='mri_2_class')
+    train_anat(hparams)

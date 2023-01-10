@@ -9,7 +9,7 @@ import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import math
-from pkg.models.pet_models.pet_cnn import ValidationLossTracker
+from pkg.models.pet_models.train_pet_cnn import ValidationLossTracker
 import sys
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 

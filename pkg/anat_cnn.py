@@ -33,7 +33,7 @@ class IntHandler:
 
 class Anat_CNN(pl.LightningModule):
 
-    def __init__(self, hparams):
+    def __init__(self, hparams, gpu_id=None):
         super().__init__()
         self.save_hyperparameters(hparams)
         if hparams["n_classes"] == 3:
@@ -44,7 +44,10 @@ class Anat_CNN(pl.LightningModule):
         # Initialize Model
         opts = parse_opts()
         opts.pretrain_path = f'/vol/chameleon/projects/adni/adni_1/MedicalNet/pretrain/resnet_{hparams["resnet_depth"]}_23dataset.pth'
-        opts.gpu_id = [hparams["gpu_id"]]
+        if gpu_id:
+            opts.gpu_id = [str(gpu_id)]
+        else:
+            opts.gpu_id = [hparams["gpu_id"]]
         opts.input_W = 91
         opts.input_H = 91
         opts.input_D = 109

@@ -26,7 +26,7 @@ class IntHandler:
 
 class Small_PET_CNN(pl.LightningModule):
 
-    def __init__(self, hparams):
+    def __init__(self, hparams, gpu_id=None):
         super().__init__()
         self.save_hyperparameters(hparams)
         if hparams["n_classes"] == 3:

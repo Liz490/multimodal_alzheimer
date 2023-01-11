@@ -47,7 +47,7 @@ class PET_CNN_ResNet(pl.LightningModule):
         if gpu_id:
             opts.gpu_id = [str(gpu_id)]
         else:
-        opts.gpu_id = [hparams["gpu_id"]]
+            opts.gpu_id = [hparams["gpu_id"]]
         opts.input_W = 91
         opts.input_H = 91
         opts.input_D = 109
@@ -145,16 +145,10 @@ class PET_CNN_ResNet(pl.LightningModule):
         x = x.unsqueeze(1)
         x = x.to(dtype=torch.float32)
         y_hat = self.forward(x).to(dtype=torch.double)
-        # print(y_hat.shape)
-        # print(sys.exit())
-        # print(f'ground truth: {y}')
-        if mode == 'train':
-            # print(f'pred {torch.argmax(y_hat, dim=1)}, gt {y}')
-            sftmx = nn.Softmax(dim=1)
-            # y_hat_sftmx = sftmx(y_hat)
-            # print(f'pred prob {torch.max(y_hat_sftmx, dim=1)}')
+        
         loss = self.criterion(y_hat, y)
-        self.log(mode + '_loss', loss, on_step=True, prog_bar=True)
+        if mode != 'pred':
+            self.log(mode + '_loss', loss, on_step=True, prog_bar=True)
         if mode == 'val':
             self.f1_score_val(y_hat, y)
         elif mode == 'train':
@@ -168,6 +162,9 @@ class PET_CNN_ResNet(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         return self.general_step(batch, batch_idx, "val")
+
+    def predict_step(self, batch, batch_idx):
+        return self.general_step(batch, batch_idx, "pred")  
 
     def configure_optimizers(self):
         parameters_optim = []

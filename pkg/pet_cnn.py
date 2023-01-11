@@ -111,8 +111,10 @@ class Small_PET_CNN(pl.LightningModule):
         x = x.unsqueeze(1)
         x = x.to(dtype=torch.float32)
         y_hat = self.forward(x).to(dtype=torch.double)
+
         loss = self.criterion(y_hat, y)
-        self.log(mode + '_loss', loss, on_step=True)
+        if mode != 'pred':
+            self.log(mode + '_loss', loss, on_step=True)
         if mode == 'val':
             self.f1_score_val(y_hat, y)
             self.f1_score_val_per_class(y_hat, y)
@@ -126,6 +128,9 @@ class Small_PET_CNN(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         return self.general_step(batch, batch_idx, "val")
+
+    def predict_step(self, batch, batch_idx):
+        return self.general_step(batch, batch_idx, "pred")
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.hparams['lr'])

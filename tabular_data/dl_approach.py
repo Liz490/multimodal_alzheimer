@@ -38,11 +38,12 @@ def train(val_data_path, train_data_path, storage_path):
     metrics.ConfusionMatrixDisplay.from_predictions(y_val, y_eval, cmap='Blues', colorbar=False,
                                                     display_labels=('NC', 'AD'))
     plt.show()
-    print(f"F1-score: {metrics.f1_score(y_val, y_eval)}")
+    f1_score = metrics.f1_score(y_val, y_eval)
+    print(f"F1-score: {f1_score}")
 
     # Save model
     breakpoint()
-    torch.save(classifier.model[2].state_dict(), storage_path)
+    torch.save({'model_state_dict': classifier.model[2].state_dict(), 'tabular_baseline_F1':f1_score}, storage_path)
 
 
 def load_model(path):
@@ -57,7 +58,8 @@ def load_model(path):
     TRAIN_PATH = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
     def load():
         classifier = tabpfn.TabPFNClassifier(device='cuda', N_ensemble_configurations=4)
-        classifier.model[2].load_state_dict(torch.load(path))
+        checkpoint = torch.load(path)
+        classifier.model[2].load_state_dict(checkpoint['model_state_dict'])
         return classifier
     try:
         classifier = load()
@@ -71,6 +73,6 @@ def load_model(path):
 if __name__ == '__main__':
     VAL_PATH = '/vol/chameleon/projects/adni/adni_1/val_path_data_labels.csv'
     TRAIN_PATH = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
-    STORAGE_PATH = '/vol/chameleon/projects/adni/adni_1/trained_models/tabular_baseline.pt'
+    STORAGE_PATH = '/vol/chameleon/projects/adni/adni_1/trained_models/tabular_baseline.pth'
     train(VAL_PATH, TRAIN_PATH, STORAGE_PATH)
 

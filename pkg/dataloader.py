@@ -290,14 +290,14 @@ class MultiModalDataset(Dataset):
             # features normalized 
             age = sample['AGE']
             pteducat = sample['PTEDUCAT']
-            ventr = sample['Ventricles'] / icv
-            hippocamp = sample['Hippocampus'] / icv
-            whole_brain = sample['PTEDUCAT'] / icv
-            entorhinal = sample['Entorhinal'] / icv
-            fusiform = sample['Fusiform'] / icv
-            mid_temp = sample['MidTemp'] / icv
+            ventr = sample['Ventricles']
+            hippocamp = sample['Hippocampus']
+            whole_brain = sample['PTEDUCAT']
+            entorhinal = sample['Entorhinal']
+            fusiform = sample['Fusiform']
+            mid_temp = sample['MidTemp']
 
-            tabular_data = torch.tensor([age, pteducat, ventr, hippocamp, whole_brain, entorhinal, fusiform, mid_temp])
+            tabular_data = torch.tensor([age, pteducat, ventr, hippocamp, whole_brain, entorhinal, fusiform, mid_temp, icv])
 
         data['tabular'] = tabular_data
         # STILL TODO!!!!!

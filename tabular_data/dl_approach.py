@@ -10,6 +10,7 @@ from sklearn.preprocessing import LabelEncoder
 import tabpfn
 import data_preparation
 import torch
+from pkg.dataloader import MultiModalDataset
 
 
 def train(val_data_path, train_data_path, storage_path):
@@ -18,20 +19,18 @@ def train(val_data_path, train_data_path, storage_path):
                 val_data_path: path to file containins validation data
                 train_data_path: path to file containins training data
     """
-    data = data_preparation.get_data(val_data_path, train_data_path)
+    trainset_tabular = MultiModalDataset(path=train_data_path, binary_classification=True, modalities=['tabular'])
+    data_train = trainset_tabular.df_tab
+    valset_tabular = MultiModalDataset(path=val_data_path, binary_classification=True, modalities=['tabular'])
+    data_val = valset_tabular.df_tab
+    data = data_preparation.get_data(data_val, data_train)
     x_train, y_train = data[0], data[1]
     x_val, y_val = data[2], data[3]
-
-    # Encode labels
-    lab_enc = LabelEncoder()
-    lab_enc.fit(y_train)
-    y_val = lab_enc.transform(y_val)
-    y_train = lab_enc.transform(y_train)
 
     # N_ensemble_configurations defines how many estimators are averaged,
     # it is bounded by #features * #classes,
     # more ensemble members are slower, but more accurate
-    classifier = TabPFNClassifier(device='cuda', N_ensemble_configurations=4)
+    classifier = tabpfn.TabPFNClassifier(device='cuda', N_ensemble_configurations=4)
     classifier.fit(x_train, y_train, overwrite_warning=True)
     y_eval, p_eval = classifier.predict(x_val, return_winning_probability=True)
 
@@ -42,6 +41,7 @@ def train(val_data_path, train_data_path, storage_path):
     print(f"F1-score: {metrics.f1_score(y_val, y_eval)}")
 
     # Save model
+    breakpoint()
     torch.save(classifier.model[2].state_dict(), storage_path)
 
 
@@ -53,10 +53,10 @@ def load_model(path):
         Returns:
             TabPFNlassifier with stored weights
     """
-    VAL_PATH = 'val_tabular_data.csv'
-    TRAIN_PATH = 'train_tabular_data.csv'
+    VAL_PATH = '/vol/chameleon/projects/adni/adni_1/val_path_data_labels.csv'
+    TRAIN_PATH = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
     def load():
-        classifier = TabPFNClassifier(device='cuda', N_ensemble_configurations=4)
+        classifier = tabpfn.TabPFNClassifier(device='cuda', N_ensemble_configurations=4)
         classifier.model[2].load_state_dict(torch.load(path))
         return classifier
     try:
@@ -69,8 +69,8 @@ def load_model(path):
 
 
 if __name__ == '__main__':
-    VAL_PATH = 'val_tabular_data.csv'
-    TRAIN_PATH = 'train_tabular_data.csv'
-    STORAGE_PATH = ''
+    VAL_PATH = '/vol/chameleon/projects/adni/adni_1/val_path_data_labels.csv'
+    TRAIN_PATH = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
+    STORAGE_PATH = '/vol/chameleon/projects/adni/adni_1/trained_models/tabular_baseline.pt'
     train(VAL_PATH, TRAIN_PATH, STORAGE_PATH)
 

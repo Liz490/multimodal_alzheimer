@@ -8,17 +8,17 @@ class tabularModel(pl.LightningModule):
 
     def __init__(self):
         super().__init__()
-        self.tabPFN = dla.load_model("")
-        self.tabPFN_backbone = nn.Sequential(*list(self.tabPFN.model[2].children())[:-1][:-2])
-        self.head = nn.Sequential(nn.GELU(approximate='none'), nn.Linear(1024, 3, bias = True))
+        self.tabPFN = dla.load_model('/vol/chameleon/projects/adni/adni_1/trained_models/tabular_baseline.pth')
+        self.tabPFN_model = self.tabPFN.model[2]
+
+        #self.tabPFN_backbone = nn.Sequential(*list(self.tabPFN.model[2].children())[:-1][:-2])
+        #self.head = nn.Sequential(nn.GELU(approximate='none'), nn.Linear(1024, 3, bias = True))
 
         for param in self.tabPFN_model.parameters():
             param.requires_grad = False
 
-
     def forward(self, x):
-        output = self.tabPFN_backbone(x)
-        output = self.head(output)
+        output = self.tabPFN_model(x)
         return output
 
 
@@ -33,12 +33,10 @@ class tabularModel(pl.LightningModule):
         logs = {"train_loss":loss}
         return {"loss": loss, "log": logs}
 
-    def validation_step(selfself, val_batch, batch_idx):
-
 
 
     trainer = pl.Trainer()
-    trainer.git8model
+
 
 
 

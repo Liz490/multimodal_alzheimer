@@ -20,12 +20,15 @@ def train_decision_tree(val_data_path, train_data_path, balanced='unbalanced'):
                 Trained decision tree
     """
 
-    trainset_tabular = MultiModalDataset(path=train_data_path, binary_classification = True, modalities=['tabular'])
-    data_train = trainset_tabular.df_tab
-    valset_tabular = MultiModalDataset(path=val_data_path, binary_classification=True, modalities=['tabular'])
-    data_val = valset_tabular.df_tab
-    x_train, y_train = data_preparation.get_data(data_train, True)
-    x_val, y_val = data_preparation.get_data(data_val, True)
+    trainset_tabular = MultiModalDataset(path=train_data_path, modalities=['tabular'])
+    data_train = trainset_tabular[0]
+    x_train = data_train['tabular']
+    y_train = data_train['label']
+
+    valset_tabular = MultiModalDataset(path=val_data_path, modalities=['tabular'])
+    data_val = valset_tabular[0]
+    x_val = data_val['tabular']
+    y_val = data_val['label']
 
     tree_model = DecisionTreeClassifier(criterion='gini', max_depth=5, random_state=1, class_weight=balanced)
     clf = tree_model.fit(x_train, y_train)
@@ -92,8 +95,8 @@ def calculate_statistic(y_val, y_train):
 
 
 if __name__ == "__main__":
-    VAL_DATA_PATH = '/vol/chameleon/projects/adni/adni_1/val_path_data_labels.csv'
-    TRAIN_DATA_PATH = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
+    VAL_DATA_PATH = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
+    TRAIN_DATA_PATH = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     model = train_decision_tree(VAL_DATA_PATH, TRAIN_DATA_PATH, balanced='balanced')
 
 

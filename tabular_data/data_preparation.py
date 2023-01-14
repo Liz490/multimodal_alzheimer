@@ -152,25 +152,25 @@ def extract_mci_val(path, columns, normalise):
     path_save = os.path.join(os.getcwd(), './val_MCI_extracted.csv')
     df_tabular.to_csv(path_save)
 
-def get_data(val_data_path, train_data_path):
+def get_data(val_data, train_data):
     """retrieves training and validation data in suitable format
         Args:
             val_data_path: path to file containins validation data
             train_data_path: path to file containins training data
     """
-    val_data = pd.read_csv(val_data_path, sep=',', header=None).to_numpy()
-    train_data = pd.read_csv(train_data_path, sep=',', header=None).to_numpy()
+    val_data = val_data.to_numpy()
+    train_data = train_data.to_numpy()
 
     # Omit index, subject-ID, examdate and label and column names
-    x_train = np.delete(train_data, [0, 1, 2, -1], 1)
+    x_train = np.delete(train_data, [0, 1, 2, 3, 4, 5, 6], 1)
     x_train = np.delete(x_train, 0, axis=0)
     # Retrieve label
-    y_train = train_data[:, -1]
+    y_train = train_data[:, 6]
     y_train = np.delete(y_train, 0, axis=0)
 
-    x_val = np.delete(val_data, [0, 1, 2, -1], 1)
+    x_val = np.delete(val_data, [0, 1, 2, 3, 4, 5, 6], 1)
     x_val = np.delete(x_val, 0, axis=0)
-    y_val = val_data[:, -1]
+    y_val = val_data[:, 6]
     y_val = np.delete(y_val, 0, axis=0)
 
     encoded_labels = encode_labels(y_train, y_val)

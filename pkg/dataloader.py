@@ -289,8 +289,8 @@ class MultiModalDataset(Dataset):
             # ICV
             icv = sample['ICV']
             # features normalized 
-            age = sample['AGE'] / icv
-            pteducat = sample['PTEDUCAT'] / icv
+            age = sample['AGE']
+            pteducat = sample['PTEDUCAT']
             ventr = sample['Ventricles'] / icv
             hippocamp = sample['Hippocampus'] / icv
             whole_brain = sample['PTEDUCAT'] / icv
@@ -436,9 +436,10 @@ def merge_two_dfs(df1: pd.Series, df2: pd.DataFrame) -> pd.DataFrame:
         self.ds = self.ds.loc[self.ds['label'] != 'MCI']
 
 if __name__ == "__main__":
-
-    trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-    valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
+    valpath = '/vol/chameleon/projects/adni/adni_1/val_path_data_labels.csv'
+    trainpath = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
+    #trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
+    #valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
     # how to use for PET
     normalization_pet = {'mean': 0.5145, 'std': 0.5383}

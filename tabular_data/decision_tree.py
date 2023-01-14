@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 from sklearn import metrics
 from sklearn.tree import DecisionTreeClassifier
-import data_preparation
 import matplotlib.pyplot as plt
+import os
+from pkg.dataloader import MultiModalDataset
 
 
 def train_decision_tree(val_data_path, train_data_path, balanced='unbalanced'):
@@ -17,9 +18,16 @@ def train_decision_tree(val_data_path, train_data_path, balanced='unbalanced'):
             Returns:
                 Trained decision tree
     """
-    data = data_preparation.get_data(val_data_path, train_data_path)
-    x_train, y_train = data[0], data[1]
-    x_val, y_val = data[2], data[3]
+
+    trainset_tabular = MultiModalDataset(path=train_data_path, modalities=['tabular'])
+    data_train = trainset_tabular[0]
+    x_train = data_train['tabular']
+    y_train = data_train['label']
+
+    valset_tabular = MultiModalDataset(path=val_data_path, modalities=['tabular'])
+    data_val = valset_tabular[0]
+    x_val = data_val['tabular']
+    y_val = data_val['label']
 
     tree_model = DecisionTreeClassifier(criterion='gini', max_depth=5, random_state=1, class_weight=balanced)
     clf = tree_model.fit(x_train, y_train)
@@ -86,10 +94,8 @@ def calculate_statistic(y_val, y_train):
 
 
 if __name__ == "__main__":
-
-    VAL_DATA_PATH = 'val_tabular_data.csv'
-    TRAIN_DATA_PATH = 'train_tabular_data.csv'
+    VAL_DATA_PATH = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
+    TRAIN_DATA_PATH = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     model = train_decision_tree(VAL_DATA_PATH, TRAIN_DATA_PATH, balanced='balanced')
 
-    MCI_PATH = 'val_MCI_extracted_data_bio.csv'
-    # predict_MCI(MCI_PATH, model)
+

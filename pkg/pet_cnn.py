@@ -64,6 +64,7 @@ class Small_PET_CNN(pl.LightningModule):
                 modules.append(
                     nn.Dropout(p=self.hparams["dropout_dense_p"]))
             modules.append(nn.Linear(n_in, n_out))
+            modules.append(nn.ReLU())
         modules.append(nn.Linear(n_out, self.hparams["n_classes"]))
 
         self.model = nn.Sequential(*modules)

@@ -7,27 +7,22 @@ https://arxiv.org/abs/2207.01848
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import metrics
-from sklearn.preprocessing import LabelEncoder
 import tabpfn
 import data_preparation
 import torch
 from pkg.dataloader import MultiModalDataset
+from torch.utils.data import DataLoader
 
-def train(val_data_path, train_data_path, storage_path, binary_classification):
+def train_and_predict(val_data_path, train_data_path, storage_path, binary_classification):
     """Trains the TabPFN classifier for tabular data
             Args:
                 val_data_path: path to file containins validation data
                 train_data_path: path to file containins training data
     """
 
-    data = data_preparation.get_data(val_data_path, train_data_path, binary_classification)
-    x_train, y_train = data[0], data[1]
-    x_val, y_val = data[2], data[3]
+    classifier = train(train_data_path, binary_classification)
 
-    # N_ensemble_configurations defines how many estimators are averaged, it is bounded by #features * #classes,
-    # more ensemble members are slower, but more accurate
-    classifier = tabpfn.TabPFNClassifier(device='cuda', N_ensemble_configurations=4)
-    classifier.fit(x_train, y_train, overwrite_warning=True)
+    x_val, y_val = data_preparation.get_data(val_data_path, binary_classification)
     y_eval, p_eval = classifier.predict(x_val, return_winning_probability=True)
 
     # Display metrics
@@ -41,16 +36,21 @@ def train(val_data_path, train_data_path, storage_path, binary_classification):
     torch.save({'model_state_dict': classifier.model[2].state_dict(), 'tabular_baseline_F1':f1_score}, storage_path)
     return classifier
 
-def majority_vote( VAL_PATH, TRAIN_PATH, binary_classification = True):
+def train(train_data_path, binary_classification):
+    x_train, y_train = data_preparation.get_data(train_data_path, binary_classification)
 
-    data = data_preparation.get_data(VAL_PATH, TRAIN_PATH, binary_classification)
-    x_train, y_train = data[0], data[1]
-    x_val, y_val = data[2], data[3]
-
+    # N_ensemble_configurations defines how many estimators are averaged, it is bounded by #features * #classes,
+    # more ensemble members are slower, but more accurate
     classifier = tabpfn.TabPFNClassifier(device='cuda', N_ensemble_configurations=4)
     classifier.fit(x_train, y_train, overwrite_warning=True)
 
-    p = classifier.predict_proba(x_val, normalize_with_test=False)
+    return classifier
+
+def predict_batch(batch, classifier):
+
+    samples = batch.numpy()
+
+    p = classifier.predict_proba(samples, normalize_with_test=False)
     y = np.argmax(p, axis=-1)
     y = classifier.classes_.take(np.asarray(y, dtype=np.intp))
     return y, p
@@ -76,7 +76,7 @@ def load_model(path, binary_classification = True):
     except:
     print('No pre-trained model available. \n Train model')
     """
-    classifier = train(VAL_PATH, TRAIN_PATH, path, binary_classification)
+    classifier = train_and_predict(VAL_PATH, TRAIN_PATH, path, binary_classification)
     return classifier
 
 
@@ -84,12 +84,23 @@ if __name__ == '__main__':
     VAL_PATH = '/vol/chameleon/projects/adni/adni_1/val_path_data_labels.csv'
     TRAIN_PATH = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
     STORAGE_PATH = '/vol/chameleon/projects/adni/adni_1/trained_models/tabular_baseline.pth'
-    train(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True)
+    train_and_predict(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True)
 
     # Example usage how to extract probabilities of TabPFN
     # load classifier
     #classifier = load_model(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True)
+    classifier = train(TRAIN_PATH, True)
 
-    y, p = majority_vote(VAL_PATH, TRAIN_PATH, True)
+    valset = MultiModalDataset(path=VAL_PATH,
+                               modalities=['tabular'],
+                               binary_classification=True)
+
+    valloader = DataLoader(
+        valset,
+        batch_size=5,
+        shuffle=False)
+
+    for batch in valloader:
+        y, p = predict_batch(batch['tabular'], classifier)
 
 

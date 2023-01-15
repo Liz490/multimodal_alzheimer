@@ -154,49 +154,36 @@ def extract_mci_val(path, columns, normalise):
     path_save = os.path.join(os.getcwd(), './val_MCI_extracted.csv')
     df_tabular.to_csv(path_save)
 
-def get_data(val_data_path, train_data_path, binary_classification):
+def get_data(data_path, binary_classification):
     """retrieves training and validation data in suitable format
         Args:
             val_data_path: path to file containins validation data
             train_data_path: path to file containins training data
     """
-    trainset_tabular = MultiModalDataset(path=train_data_path, binary_classification=binary_classification,
+    set_tabular = MultiModalDataset(path=data_path, binary_classification=binary_classification,
                                          modalities=['tabular'])
-    train_data = trainset_tabular.df_tab.to_numpy()
-
-    valset_tabular = MultiModalDataset(path=val_data_path, binary_classification=binary_classification,
-                                       modalities=['tabular'])
-    val_data = valset_tabular.df_tab.to_numpy()
+    data = set_tabular.df_tab.to_numpy()
 
     # Omit index, subject-ID, examdate and label and column names
-    x_train = np.delete(train_data, [0, 1, 2, 3, 4, 5, 6], 1)
-    x_train = np.delete(x_train, 0, axis=0)
+    samples = np.delete(data, [0, 1, 2, 3, 4, 5, 6], 1)
+    samples = np.delete(samples, 0, axis=0)
     # Retrieve label
-    y_train = train_data[:, 6]
-    y_train = np.delete(y_train, 0, axis=0)
+    labels = data[:, 6]
+    labels = np.delete(labels, 0, axis=0)
 
-    x_val = np.delete(val_data, [0, 1, 2, 3, 4, 5, 6], 1)
-    x_val = np.delete(x_val, 0, axis=0)
-    y_val = val_data[:, 6]
-    y_val = np.delete(y_val, 0, axis=0)
+    labels = encode_labels(labels)
 
-    encoded_labels = encode_labels(y_train, y_val)
-    y_val = encoded_labels[0]
-    y_train = encoded_labels[1]
+    return samples, labels
 
-    return x_train, y_train, x_val, y_val
-
-def encode_labels(y_train, y_val):
+def encode_labels(labels):
     """Encodes labels (MCI, AD, CN) numerically
         Args:
-            y_val: labels from validation set
-            y_train: labels from training set
+            labels: labels to be encoded
     """
     lab_enc = LabelEncoder()
-    lab_enc.fit(y_train)
-    y_val = lab_enc.transform(y_val)
-    y_train = lab_enc.transform(y_train)
-    return y_val, y_train
+    lab_enc.fit(labels)
+    encoded = lab_enc.transform(labels)
+    return encoded
 
 if __name__ == "__main__":
     PATH = '../../Adni_merged.csv'

@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 from focalloss import FocalLoss
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 class IntHandler:
     """
@@ -140,7 +141,13 @@ class Small_PET_CNN(pl.LightningModule):
         return self.general_step(batch, batch_idx, "pred")
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters(), lr=self.hparams['lr'])
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hparams['lr'])
+        if self.hparams['reduce_factor_lr_schedule']:
+            scheduler = ReduceLROnPlateau(optimizer, factor=self.hparams['reduce_factor_lr_schedule'])
+            return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss_epoch"}
+            #return [optimizer], [scheduler]
+        else:
+            return optimizer
 
     def training_epoch_end(self, training_step_outputs):
         avg_loss = torch.stack([x['loss']
@@ -171,6 +178,7 @@ class Small_PET_CNN(pl.LightningModule):
         self.f1_score_val.reset()
         self.f1_score_val_per_class.reset()
 
+        # current_lr = optimizer.param_groups[0]['lr']
         log_dict = {
             'val_loss_epoch': avg_loss,
             'val_f1_epoch': f1_epoch,

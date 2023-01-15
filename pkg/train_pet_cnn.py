@@ -189,7 +189,7 @@ def train(hparams,
             lr_monitor
         ]
     )
-
+    
     trainer.fit(model, trainloader, valloader)
     return val_loss_tracker.val_loss[-1]
 
@@ -224,20 +224,20 @@ if __name__ == '__main__':
     # hparams["n_classes"] = 2
 
 
-    # Best two class:
-    hparams = {
-        'early_stopping_patience': 10,
-        'max_epochs': 50,
-        'norm_mean': 0.5145,
-        'norm_std': 0.5383,
-        'lr': 0.00075356,
-        'batch_size': 64,
-        'conv_out': [8, 16, 32, 64],
-        'filter_size': [3, 3, 3, 3],
-        'batchnorm': False,
-        'n_classes': 2,
-        'linear_out': 64
-    }
+    # # Best two class:
+    # hparams = {
+    #     'early_stopping_patience': 10,
+    #     'max_epochs': 50,
+    #     'norm_mean': 0.5145,
+    #     'norm_std': 0.5383,
+    #     'lr': 0.00075356,
+    #     'batch_size': 64,
+    #     'conv_out': [8, 16, 32, 64],
+    #     'filter_size': [3, 3, 3, 3],
+    #     'batchnorm': False,
+    #     'n_classes': 2,
+    #     'linear_out': 64
+    # }
 
     # Best two class with batchnorm
     # hparams = {
@@ -254,6 +254,23 @@ if __name__ == '__main__':
     #     'linear_out': 64
     # }
 
-    # train(hparams, experiment_name='', experiment_version='unchanged')
-    train(hparams)
+    # Best two class retrain # version 33
+    hparams = {
+        'early_stopping_patience': 30,
+        'max_epochs': 300,
+        'norm_mean': 0.5145,
+        'norm_std': 0.5383,
+        'lr': 0.0009905814208136547,
+        'batch_size': 64,
+        'conv_out': [8, 16, 32, 64],
+        'filter_size': [5, 5, 3, 3],
+        'batchnorm': False,
+        'n_classes': 2,
+        'linear_out': 64,
+        'fl_gamma': 5,
+        'reduce_factor_lr_schedule': 0.5,
+    }
+
+    train(hparams, experiment_name='testruns', experiment_version='lr_monitor')
+    # train(hparams)
     # TODO rerun with MCI samples

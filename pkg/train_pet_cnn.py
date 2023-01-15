@@ -80,6 +80,7 @@ def optuna_just_sampling(trial):
         'norm_mean': 0.5145,
         'norm_std': 0.5383,
         'reduce_factor_lr_schedule': None,
+        'n_classes': 3
     }
     hparams['lr'] = trial.suggest_float(
         'learning_rate', lr_min, lr_max, log=True)

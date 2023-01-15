@@ -11,6 +11,7 @@ import io
 import matplotlib.pyplot as plt
 from PIL import Image
 
+from focalloss import FocalLoss
 
 class IntHandler:
     """
@@ -65,6 +66,12 @@ class Small_PET_CNN(pl.LightningModule):
         modules.append(nn.Linear(n_out, self.hparams["n_classes"]))
 
         self.model = nn.Sequential(*modules)
+
+        if 'fl_gamma' in hparams and hparams['fl_gamma']:
+            self.criterion = FocalLoss(gamma=self.hparams['fl_gamma'])
+        else:
+            self.criterion = nn.CrossEntropyLoss(
+                weight=hparams['loss_class_weights'])
 
         self.criterion = nn.CrossEntropyLoss(
             weight=hparams['loss_class_weights'])

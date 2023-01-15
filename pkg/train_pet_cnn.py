@@ -39,6 +39,7 @@ def optuna_just_sampling(trial):
     lr_min = 5e-6
     lr_max = 1e-3
     batch_size_options = [8, 16, 32, 64]
+    gamma_options = [None, 1, 2, 5]
 
     # Dynamic generation of conv_out options
     conv_out_first_options = [8, 16, 32]
@@ -105,6 +106,7 @@ def optuna_just_sampling(trial):
         hparams['dropout_dense'] = trial.suggest_float(
             'dropout_dense_p', dropout_dense_min, dropout_dense_max)
 
+    hparams['fl_gamma'] = trial.suggest_categorical('fl_gamma', gamma_options)
     # Train network
     try:
         val_loss = train(hparams,

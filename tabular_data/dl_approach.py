@@ -49,11 +49,10 @@ def train(train_data_path, binary_classification):
 def predict_batch(batch, classifier):
 
     samples = batch.numpy()
-
-    p = classifier.predict_proba(samples, normalize_with_test=False)
-    y = np.argmax(p, axis=-1)
-    y = classifier.classes_.take(np.asarray(y, dtype=np.intp))
-    return y, p
+    logits = classifier.predict_proba(samples, normalize_with_test=False)
+    pred = np.argmax(logits, axis=-1)
+    pred = classifier.classes_.take(np.asarray(pred, dtype=np.intp))
+    return pred, logits
 
 
 def load_model(path, binary_classification = True):

@@ -16,7 +16,6 @@ EXPERIMENT_NAME = 'optuna_two_class'
 EXPERIMENT_VERSION = None
 
 
-
 class ValidationLossTracker(Callback):
     """
     Tracks validation loss per epoch across epochs
@@ -201,7 +200,7 @@ def train(hparams,
             ModelCheckpoint(monitor='val_loss_epoch')
         ]
     )
-    
+
     trainer.fit(model, trainloader, valloader)
     return val_loss_tracker.val_loss[-1]
 

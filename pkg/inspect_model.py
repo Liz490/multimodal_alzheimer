@@ -1,4 +1,3 @@
-
 # IMPORTS
 import torch
 from torch import nn 
@@ -154,7 +153,7 @@ def train(lr=1e-5):
         predictions_epoch = []
         
         # send model to train mode
-        model.train()
+        model.train_and_predict()
         
         # iterate over train split
         for i, (x,y) in enumerate(trainloader):

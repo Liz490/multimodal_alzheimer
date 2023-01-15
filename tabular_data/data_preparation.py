@@ -12,6 +12,8 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
+from pkg.dataloader import MultiModalDataset
+
 
 def split_tabular(columns, path):
     """Creates data split that is in line with the data split for PET data,
@@ -152,14 +154,19 @@ def extract_mci_val(path, columns, normalise):
     path_save = os.path.join(os.getcwd(), './val_MCI_extracted.csv')
     df_tabular.to_csv(path_save)
 
-def get_data(val_data, train_data):
+def get_data(val_data_path, train_data_path, binary_classification):
     """retrieves training and validation data in suitable format
         Args:
             val_data_path: path to file containins validation data
             train_data_path: path to file containins training data
     """
-    val_data = val_data.to_numpy()
-    train_data = train_data.to_numpy()
+    trainset_tabular = MultiModalDataset(path=train_data_path, binary_classification=binary_classification,
+                                         modalities=['tabular'])
+    train_data = trainset_tabular.df_tab.to_numpy()
+
+    valset_tabular = MultiModalDataset(path=val_data_path, binary_classification=binary_classification,
+                                       modalities=['tabular'])
+    val_data = valset_tabular.df_tab.to_numpy()
 
     # Omit index, subject-ID, examdate and label and column names
     x_train = np.delete(train_data, [0, 1, 2, 3, 4, 5, 6], 1)
@@ -196,10 +203,7 @@ if __name__ == "__main__":
     cols = ['EXAMDATE', 'Ventricles', 'Hippocampus', 'WholeBrain',
             'Entorhinal', 'Fusiform', 'MidTemp', 'ICV', 'AGE',
             'DX']
-    '''
-    split_tabular(cols, PATH)
-    print('Dataset split performed!')
-    '''
+
     MCI = False
     EXTRACT_MCI = False
     normalise = ['Ventricles', 'Hippocampus', 'WholeBrain', 'Entorhinal', 'Fusiform', 'MidTemp']

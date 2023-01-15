@@ -24,8 +24,7 @@ def train_decision_tree(val_data_path, train_data_path, balanced='unbalanced'):
     data_train = trainset_tabular.df_tab
     valset_tabular = MultiModalDataset(path=val_data_path, binary_classification=True, modalities=['tabular'])
     data_val = valset_tabular.df_tab
-    breakpoint()
-    data = data_preparation.get_data(data_val, data_train)
+    data = data_preparation.get_data(data_val, data_train, False)
     x_train, y_train = data[0], data[1]
     x_val, y_val = data[2], data[3]
 

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import metrics
 import tabpfn
-import data_preparation
+from tabular_data import data_preparation
 import torch
 from pkg.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
@@ -36,12 +36,12 @@ def train_and_predict(val_data_path, train_data_path, storage_path, binary_class
     torch.save({'model_state_dict': classifier.model[2].state_dict(), 'tabular_baseline_F1':f1_score}, storage_path)
     return classifier
 
-def train(train_data_path, binary_classification):
-    x_train, y_train = data_preparation.get_data(train_data_path, binary_classification)
+def train(x_train, y_train, binary_classification):
+    #x_train, y_train = data_preparation.get_data(train_data_path, binary_classification)
 
     # N_ensemble_configurations defines how many estimators are averaged, it is bounded by #features * #classes,
     # more ensemble members are slower, but more accurate
-    classifier = tabpfn.TabPFNClassifier(device='cuda', N_ensemble_configurations=4)
+    classifier = tabpfn.TabPFNClassifier(device='cuda', N_ensemble_configurations=6)
     classifier.fit(x_train, y_train, overwrite_warning=True)
 
     return classifier

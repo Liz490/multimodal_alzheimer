@@ -30,13 +30,15 @@ VALPATH = os.path.join(BASEPATH, 'data/val_path_data_labels.csv')
 # path checkpoints
 # TODO: update with best model checkpoints
 # path for binary classification
-PATH_PET_CNN_2_CLASSES = os.path.join(BASEPATH, '/u/home/kos/adlm_adni/lightning_logs/optuna_two_class/version_144/checkpoints/epoch=49-step=49.ckpt')
+# '/u/home/kos/adlm_adni/lightning_logs/optuna_two_class/version_144/checkpoints/epoch=49-step=49.ckpt'
+PATH_PET_CNN_2_CLASSES = os.path.join(BASEPATH, 'lightning_logs/testruns/lr_monitor/checkpoints/epoch=142-step=142.ckpt')
 PATH_MRI_CNN_2_CLASSES = os.path.join(BASEPATH, '/u/home/kos/adlm_adni/lightning_logs/optuna_mri_two_class_var_resnet/version_301/checkpoints/epoch=49-step=49.ckpt')
 PATH_TABULAR_2_CLASSES = ''
 # path for three class classification
 PATH_PET_CNN_3_CLASSES = ''
 PATH_MRI_CNN_3_CLASSES = ''
 PATH_TABULAR_3_CLASSES = ''
+print(PATH_PET_CNN_2_CLASSES)
 
 # TODO: insert correct values
 # F1 scores from training as weights
@@ -90,12 +92,12 @@ def majority_voting(modalities=['pet1451', 't1w', 'tabular'], binary_classificat
     weights = torch.tensor(weights)
 
     # dataset classes
-    trainset = MultiModalDataset(path=TRAINPATH, 
-                                modalities=modalities,
-                                normalize_pet=NORMALIZATION_PET,
-                                normalize_mri=NORMALIZATION_MRI,
-                                quantile=quantile,
-                                binary_classification=True)
+    # trainset = MultiModalDataset(path=TRAINPATH, 
+    #                             modalities=modalities,
+    #                             normalize_pet=NORMALIZATION_PET,
+    #                             normalize_mri=NORMALIZATION_MRI,
+    #                             quantile=quantile,
+    #                             binary_classification=True)
     valset = MultiModalDataset(path=VALPATH,
                             modalities=modalities,
                             normalize_pet=NORMALIZATION_PET,
@@ -103,27 +105,37 @@ def majority_voting(modalities=['pet1451', 't1w', 'tabular'], binary_classificat
                             quantile=quantile,
                             binary_classification=True)
 
-    trainloader = DataLoader(
-            trainset,
-            batch_size=5,
-            shuffle=True,
-            num_workers=32
-        )
+    # trainloader = DataLoader(
+    #         trainset,
+    #         batch_size=5,
+    #         shuffle=True,
+    #         num_workers=32
+    #     )
 
     valloader = DataLoader(
             valset,
-            batch_size=5,
+            batch_size=len(valset),
             shuffle=False,
             num_workers=32)
 
 
-    trainer = pl.Trainer()
-    predictions = []
+    # trainer = pl.Trainer()
+    # predictions = []
     # for each modality a list of dicts with 'loss', outputs': tensor of shape batch_size x num_classes , 'labels'
+    batch = next(iter(valloader))
+    print(batch['tabular'].shape)
+    
+    # print(len(batch['pet1451']))
+    # mdl = models[0]
+    # print(mdl.predict_step(batch=batch,batch_idx=0)['outputs'].shape)
+    sys.exit()
     for model in models:
+        # for batch in valloader:
+        #     y_1 = model1(x1)
+        #     x_tabular = batch['tabular']
         model.eval()
         predictions.append(trainer.predict(model, valloader))
-
+    print(predictions)
     # a list that holds the ensambled prediction for each batch
     ensamble_predictions = []
     for prediction_tuple in zip(*predictions):
@@ -146,7 +158,7 @@ def majority_voting(modalities=['pet1451', 't1w', 'tabular'], binary_classificat
     
 
 if __name__ == "__main__":
-    ensamble_preds = majority_voting(modalities=['pet1451', 't1w'],
+    ensamble_preds = majority_voting(modalities=['tabular'], #, 't1w'
                                     binary_classification=True)
     for ens in ensamble_preds:
         print(ens)

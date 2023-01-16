@@ -35,7 +35,7 @@ class PET_CNN_ResNet(pl.LightningModule):
 
     def __init__(self, hparams):
         super().__init__()
-        self.save_hyperparameters(hparams)
+        self.save_hyperparameters(hparams, ignore=["gpu_id"])
         if hparams["n_classes"] == 3:
             self.label_ind_by_names = {'CN': 0, 'MCI': 1, 'AD': 2}
         else:

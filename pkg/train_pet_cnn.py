@@ -154,6 +154,7 @@ def train(hparams,
 
     _, weight_normalized = trainset.get_label_distribution()
     hparams['loss_class_weights'] = 1 - weight_normalized
+    hparams['loss_class_weights_human_readable'] = hparams['loss_class_weights'].tolist()  # original hparam is a Tensor that isn't stored in human readable format
 
     # model = Random_Benchmark(hparams=hparams)
     model = Small_PET_CNN(hparams=hparams)
@@ -219,7 +220,7 @@ if __name__ == '__main__':
         'max_epochs': 50,
         'norm_mean': 0.5145,
         'norm_std': 0.5383,
-        'lr': 0.00075356,
+        'lr': 0.0007535639617863388,
         'batch_size': 64,
         'conv_out': [8, 16, 32, 64],
         'filter_size': [3, 3, 3, 3],
@@ -228,21 +229,4 @@ if __name__ == '__main__':
         'linear_out': 64
     }
 
-    # Best two class with batchnorm
-    # hparams = {
-    #     'early_stopping_patience': 10,
-    #     'max_epochs': 50,
-    #     'norm_mean': 0.5145,
-    #     'norm_std': 0.5383,
-    #     'lr': 0.00075356,
-    #     'batch_size': 64,
-    #     'conv_out': [8, 16, 32, 64],
-    #     'filter_size': [3, 3, 3, 3],
-    #     'batchnorm': True,
-    #     'n_classes': 2,
-    #     'linear_out': 64
-    # }
-
-    # train(hparams, experiment_name='', experiment_version='unchanged')
-    train(hparams)
-    # TODO rerun with MCI samples
+    train(hparams, experiment_name='')

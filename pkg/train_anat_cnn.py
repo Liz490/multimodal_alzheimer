@@ -186,6 +186,7 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
     # Get class distribution of the trainset for weighted loss
     _, weight_normalized = trainset.get_label_distribution()
     hparams['loss_class_weights'] = 1 - weight_normalized
+    hparams['loss_class_weights_human_readable'] = hparams['loss_class_weights'].tolist()  # original hparam is a Tensor that isn't stored in human readable format
 
     model = Anat_CNN(hparams=hparams)
 
@@ -232,29 +233,53 @@ if __name__ == '__main__':
     #####################
 
     # Experimental hyperparameters
+    # hparams = {
+    #     'early_stopping_patience': 5,
+    #     'max_epochs': 20,
+    #     'norm_mean_train': 413.6510,
+    #     'norm_std_train': 918.5371,
+    #     'norm_mean_val': 418.4120,
+    #     'norm_std_val': 830.2466,
+    #     'n_classes': 2,
+    #     'lr': 1e-4,
+    #     'batch_size': 64,
+    #     'fl_gamma': 2,
+    #     # 'conv_out': [],
+    #     # 'filter_size': [5, 5],
+    #     'lr_pretrained': 1e-5,
+    #     'batchnorm_begin': True,
+    #     # 'batchnorm_conv': True,
+    #     'batchnorm_dense': True,
+    #     'l2_reg': 1e-2,
+    #     # 'linear_out': [256, 256, 256],
+    #     'linear_out': [],
+    #     'norm_percentile': 0.99,
+    #     'resnet_depth': 18,
+    #     'gpu_id': 6,
+    # }
+
+    # Best two class
     hparams = {
-        'early_stopping_patience': 5,
-        'max_epochs': 20,
+        'early_stopping_patience': 10,
+        'max_epochs': 50,
         'norm_mean_train': 413.6510,
         'norm_std_train': 918.5371,
         'norm_mean_val': 418.4120,
         'norm_std_val': 830.2466,
         'n_classes': 2,
-        'lr': 1e-4,
+        'lr': 1.2478982228687482e-05,
         'batch_size': 64,
-        'fl_gamma': 2,
-        # 'conv_out': [],
-        # 'filter_size': [5, 5],
-        'lr_pretrained': 1e-5,
-        'batchnorm_begin': True,
-        # 'batchnorm_conv': True,
+        'fl_gamma': 5,
+        'conv_out': [],
+        'filter_size': [],
+        'lr_pretrained': 1.3931116859572868e-06,
+        'batchnorm_begin': False,
         'batchnorm_dense': True,
-        'l2_reg': 1e-2,
-        # 'linear_out': [256, 256, 256],
+        'l2_reg': 0,
         'linear_out': [],
-        'norm_percentile': 0.99,
+        'norm_percentile': 0.95,
         'resnet_depth': 18,
         'gpu_id': 6,
     }
 
-    train(hparams)
+    train_anat(hparams, experiment_name='')

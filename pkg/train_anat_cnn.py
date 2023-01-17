@@ -8,6 +8,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import math
 from pkg.train_pet_cnn import ValidationLossTracker
+from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 
 LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'optuna_mri_two_class_var_resnet'
@@ -57,6 +58,7 @@ def optuna_objective(trial):
         'norm_std_val': 830.2466,
         'n_classes': 2,
         'gpu_id': 6,
+        'reduce_factor_lr_schedule': None
     }
 
     def generate_linear_block_options(first_layer_options: list,
@@ -159,6 +161,9 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
     """
     pl.seed_everything(15, workers=True)
 
+    # CALLBACKS
+    lr_monitor = LearningRateMonitor(logging_interval='epoch')
+
     assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
     if hparams['n_classes'] == 2:
         binary_classification=True
@@ -214,7 +219,9 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
                 mode='min',
                 patience=hparams['early_stopping_patience']
             ),
-            val_loss_tracker
+            val_loss_tracker,
+            lr_monitor,
+            ModelCheckpoint(monitor='val_loss_epoch')
         ]
     )
 

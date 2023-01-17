@@ -9,7 +9,7 @@ import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
-from dataloader import MultiModalDataset
+from pkg.utils.dataloader import MultiModalDataset
 
 LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'optuna_two_class'
@@ -282,6 +282,6 @@ if __name__ == '__main__':
         'reduce_factor_lr_schedule': 0.5,
     }
 
-    train(hparams, experiment_name='best_runs', experiment_version='pet_2_class')
+    train(hparams, experiment_name='test_runs', experiment_version='pet_2_class')
     # train(hparams)
     # TODO rerun with MCI samples

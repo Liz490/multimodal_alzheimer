@@ -6,7 +6,7 @@ from sklearn.tree import DecisionTreeClassifier
 import matplotlib.pyplot as plt
 import data_preparation
 import os
-from pkg.dataloader import MultiModalDataset
+from pkg.utils.dataloader import MultiModalDataset
 
 
 def train_decision_tree(val_data_path, train_data_path, balanced='unbalanced'):

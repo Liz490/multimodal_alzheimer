@@ -11,15 +11,15 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import torchmetrics
 import torchvision
-from pet_cnn import Small_PET_CNN
-from anat_cnn import Anat_CNN
+from pkg.models.pet_models.pet_cnn import Small_PET_CNN
+from pkg.models.mri_models.anat_cnn import Anat_CNN
 
 from MedicalNet.models import resnet
 from MedicalNet.model import generate_model
 from MedicalNet.setting import parse_opts
 import sys
 
-from focalloss import FocalLoss
+from pkg.loss_functions.focalloss import FocalLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 class IntHandler:

@@ -11,7 +11,7 @@ import io
 import matplotlib.pyplot as plt
 from PIL import Image
 
-from focalloss import FocalLoss
+from pkg.loss_functions.focalloss import FocalLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 class IntHandler:

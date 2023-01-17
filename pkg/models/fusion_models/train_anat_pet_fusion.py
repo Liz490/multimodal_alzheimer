@@ -13,6 +13,7 @@ from pkg.models.pet_models.pet_cnn import ValidationLossTracker
 import sys
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 
+# tensorboard and checkpoint logging
 LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'optuna_pet_mri_fusion_two_class'
 EXPERIMENT_VERSION = None
@@ -21,7 +22,7 @@ EXPERIMENT_VERSION = None
 BASEPATH = os.getcwd()
 PATH_PET_CNN = os.path.join(BASEPATH, 'lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt')
 PATH_MRI_CNN = os.path.join(BASEPATH, 'lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt')
-
+# load checkpoints
 MODEL_PET = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN)
 MODEL_MRI = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN)
 
@@ -88,9 +89,9 @@ def optuna_objective(trial):
         hparams['early_stopping_patience'] = 10
         hparams['max_epochs'] = 50
     hparams['l2_reg'] = trial.suggest_categorical('l2_reg', l2_options)
+    # gamma parameter for focal loss
     hparams['fl_gamma'] = trial.suggest_categorical('fl_gamma', gamma_options)
 
-    
     # Train network
     try:
         val_loss = train_anat_pet(hparams=hparams,
@@ -116,6 +117,7 @@ def train_anat_pet(hparams, model_pet, model_mri, experiment_name='', experiment
     Returns:
         Validation loss of last epoch
     """
+    # fix random seeds for reproducability
     pl.seed_everything(15, workers=True)
 
     # CALLBACKS
@@ -222,17 +224,7 @@ if __name__ == '__main__':
         'lr': 0.0008678312514285887,
         'batch_size': 32,
         'fl_gamma': 5,
-        # 'conv_out': [],
-        # 'filter_size': [5, 5],
-        #'lr_pretrained': 1e-5,
-        #'batchnorm_begin': True,
-        # 'batchnorm_conv': True,
-        #'batchnorm_dense': True,
         'l2_reg': 0,
-        # 'linear_out': [256, 256, 256],
-        #'linear_out': [],
-        #'norm_percentile': 0.99,
-        #'resnet_depth': 18,
         'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
         'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt',
         'reduce_factor_lr_schedule': 0.1

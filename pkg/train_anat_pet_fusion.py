@@ -19,8 +19,8 @@ EXPERIMENT_VERSION = None
 
 # PET and MRI models
 BASEPATH = os.getcwd()
-PATH_PET_CNN = os.path.join(BASEPATH, '/u/home/kos/adlm_adni/lightning_logs/optuna_two_class/version_144/checkpoints/epoch=49-step=49.ckpt')
-PATH_MRI_CNN = os.path.join(BASEPATH, '/u/home/kos/adlm_adni/lightning_logs/optuna_mri_two_class_var_resnet/version_301/checkpoints/epoch=49-step=49.ckpt')
+PATH_PET_CNN = os.path.join(BASEPATH, 'lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt')
+PATH_MRI_CNN = os.path.join(BASEPATH, 'lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt')
 
 MODEL_PET = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN)
 MODEL_MRI = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN)

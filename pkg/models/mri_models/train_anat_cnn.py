@@ -245,32 +245,6 @@ if __name__ == '__main__':
     # optuna_optimization()
     #####################
 
-    # Experimental hyperparameters
-    # hparams = {
-    #     'early_stopping_patience': 5,
-    #     'max_epochs': 20,
-    #     'norm_mean_train': 413.6510,
-    #     'norm_std_train': 918.5371,
-    #     'norm_mean_val': 418.4120,
-    #     'norm_std_val': 830.2466,
-    #     'n_classes': 2,
-    #     'lr': 1e-4,
-    #     'batch_size': 64,
-    #     'fl_gamma': 2,
-    #     # 'conv_out': [],
-    #     # 'filter_size': [5, 5],
-    #     'lr_pretrained': 1e-5,
-    #     'batchnorm_begin': True,
-    #     # 'batchnorm_conv': True,
-    #     'batchnorm_dense': True,
-    #     'l2_reg': 1e-2,
-    #     # 'linear_out': [256, 256, 256],
-    #     'linear_out': [],
-    #     'norm_percentile': 0.99,
-    #     'resnet_depth': 18,
-    #     'gpu_id': 6,
-    # }
-
     # Best checkpoint 2 class version 44 
     hparams = {
         'early_stopping_patience': 30,
@@ -283,14 +257,10 @@ if __name__ == '__main__':
         'lr': 0.0002423919938002486,
         'batch_size': 64,
         'fl_gamma': 1,
-        # 'conv_out': [],
-        # 'filter_size': [5, 5],
         'lr_pretrained': 1.522005844135047e-06,
         'batchnorm_begin': True,
-        # 'batchnorm_conv': True,
         'batchnorm_dense': True,
         'l2_reg': 0.001,
-        # 'linear_out': [256, 256, 256],
         'linear_out': [],
         'norm_percentile': 0.98,
         'resnet_depth': 18,

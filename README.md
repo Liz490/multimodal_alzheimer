@@ -16,6 +16,11 @@ Our 3-stage model is inspired by the following [paper](https://pubmed.ncbi.nlm.n
 In our multi-modal dataloader, we try to use our data as efficiently as possible. This means that a sample fed into a single-modal model can be used to create multiple samples for a multi-modal model.
 ![fusion_model](readme_images/data_pairs.png)
 
+## Data Imbalance
+We can observe that the AD class in underrepresented in the ADNI dataset. In order to tackle this imbalance during trainig we apply two different approaches:
+- use a weighted CE loss function
+- use the [Focal Loss](https://github.com/clcarwin/focal_loss_pytorch) function
+![fusion_model](readme_images/imbalance.png)
 ## Data Pre-processing
 ### MRI
 Data normalization is performed:
@@ -41,6 +46,8 @@ The authors:
 
 ### Fusion PET-MRI
 ![normalization_mri](readme_images/pet_mri_fusion.png)
+<img src="readme_images/mri_pet_conf_mat.png" alt="conf_mat" width="220"/> <img src="readme_images/mri_pet_val_loss.png" alt="val_loss" width="237"/>
+
 # Setup
 
 ## Environment

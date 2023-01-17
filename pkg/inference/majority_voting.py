@@ -3,15 +3,15 @@ import pytorch_lightning as pl
 import os
 import torch
 #from pytorch_lightning.callbacks import ModelCheckpoint
-from pet_resnet_cnn import PET_CNN_ResNet
-from pet_cnn import Small_PET_CNN
-from anat_cnn import Anat_CNN
+from pkg.models.pet_models.pet_resnet_cnn import PET_CNN_ResNet
+from pkg.models.pet_models.pet_cnn import Small_PET_CNN
+from pkg.models.mri_models.anat_cnn import Anat_CNN
 import sys
-from dataloader import MultiModalDataset
+from pkg.utils.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
 
-from tabular_data.dl_approach import *
-import tabular_data.data_preparation 
+from pkg.models.tabular_models.dl_approach import *
+import pkg.models.tabular_models.data_preparation 
 import torchmetrics
 import pandas as pd
 import seaborn as sns
@@ -19,7 +19,7 @@ import io
 import matplotlib.pyplot as plt
 from PIL import Image
 import torchvision
-from pet_cnn import IntHandler
+from pkg.models.pet_models.pet_cnn import IntHandler
 from torchmetrics.classification import MulticlassF1Score
 '''
 different modes: 

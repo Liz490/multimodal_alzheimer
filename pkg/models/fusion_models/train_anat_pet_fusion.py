@@ -1,15 +1,15 @@
 import os
 import torch
-from dataloader import MultiModalDataset
+from pkg.utils.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
-from pkg.anat_cnn import Anat_CNN
-from pkg.pet_cnn import Small_PET_CNN
-from pkg.anat_pet_fusion import Anat_PET_CNN
+from pkg.models.mri_models.anat_cnn import Anat_CNN
+from pkg.models.pet_models.pet_cnn import Small_PET_CNN
+from anat_pet_fusion import Anat_PET_CNN
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import math
-from pkg.train_pet_cnn import ValidationLossTracker
+from pkg.models.pet_models.pet_cnn import ValidationLossTracker
 import sys
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 

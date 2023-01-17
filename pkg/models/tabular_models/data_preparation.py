@@ -9,7 +9,7 @@ Furthermore, it provides a function to exclude/include MCI data.
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
-from pkg.dataloader import MultiModalDataset
+from pkg.utils.dataloader import MultiModalDataset
 
 
 def get_data(data_path, binary_classification):

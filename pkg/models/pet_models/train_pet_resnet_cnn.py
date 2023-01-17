@@ -1,13 +1,13 @@
 import os
 import torch
-from dataloader import MultiModalDataset
+from pkg.utils.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
-from pkg.pet_resnet_cnn import PET_CNN_ResNet
+from pet_resnet_cnn import PET_CNN_ResNet
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import math
-from pkg.train_pet_cnn import ValidationLossTracker
+from train_pet_cnn import ValidationLossTracker
 
 LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'optuna_pet_two_class_var_resnet'

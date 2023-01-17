@@ -17,7 +17,7 @@ from MedicalNet.model import generate_model
 from MedicalNet.setting import parse_opts
 import sys
 
-from focalloss import FocalLoss
+from pkg.loss_functions.focalloss import FocalLoss
 
 class IntHandler:
     """

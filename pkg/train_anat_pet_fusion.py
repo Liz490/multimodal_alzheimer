@@ -14,7 +14,7 @@ import sys
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'optuna_pet_mri_fusion_two_class_var'
+EXPERIMENT_NAME = 'optuna_pet_mri_fusion_two_class'
 EXPERIMENT_VERSION = None
 
 # PET and MRI models
@@ -207,34 +207,36 @@ def optuna_optimization():
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    optuna_optimization()
+    #optuna_optimization()
     #####################
 
-    # # Experimental hyperparameters
-    # hparams = {
-    #     'early_stopping_patience': 5,
-    #     'max_epochs': 20,
-    #     'norm_mean_train': 413.6510,
-    #     'norm_std_train': 918.5371,
-    #     'norm_mean_val': 418.4120,
-    #     'norm_std_val': 830.2466,
-    #     'n_classes': 2,
-    #     'lr': 1e-4,
-    #     'batch_size': 64,
-    #     'fl_gamma': 2,
-    #     # 'conv_out': [],
-    #     # 'filter_size': [5, 5],
-    #     'lr_pretrained': 1e-5,
-    #     'batchnorm_begin': True,
-    #     # 'batchnorm_conv': True,
-    #     'batchnorm_dense': True,
-    #     'l2_reg': 1e-2,
-    #     # 'linear_out': [256, 256, 256],
-    #     'linear_out': [],
-    #     'norm_percentile': 0.99,
-    #     'resnet_depth': 18,
-    #     'gpu_id': 6,
-    # }
+    # fine-tune best run (version 56)
+    hparams = {
+        'early_stopping_patience': 30,
+        'max_epochs': 300,
+        'norm_mean_train': 413.6510,
+        'norm_std_train': 918.5371,
+        'norm_mean_val': 418.4120,
+        'norm_std_val': 830.2466,
+        'n_classes': 2,
+        'lr': 0.0008678312514285887,
+        'batch_size': 32,
+        'fl_gamma': 5,
+        # 'conv_out': [],
+        # 'filter_size': [5, 5],
+        #'lr_pretrained': 1e-5,
+        #'batchnorm_begin': True,
+        # 'batchnorm_conv': True,
+        #'batchnorm_dense': True,
+        'l2_reg': 0,
+        # 'linear_out': [256, 256, 256],
+        #'linear_out': [],
+        #'norm_percentile': 0.99,
+        #'resnet_depth': 18,
+        'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
+        'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt',
+        'reduce_factor_lr_schedule': 0.1
+    }
 
     train_anat_pet(hparams, 
                 model_pet=MODEL_PET,

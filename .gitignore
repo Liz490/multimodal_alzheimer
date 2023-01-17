@@ -5,7 +5,7 @@ MedicalNet/
 lightning_logs/
 kfold_checkpoints/
 .tensorboard-info/
-
+confusion_matrices
 
 # IDEs
 .idea/

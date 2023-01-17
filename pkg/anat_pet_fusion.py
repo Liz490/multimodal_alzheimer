@@ -20,6 +20,7 @@ from MedicalNet.setting import parse_opts
 import sys
 
 from focalloss import FocalLoss
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 class IntHandler:
     """
@@ -151,8 +152,13 @@ class Anat_PET_CNN(pl.LightningModule):
                 'params': param,
                 'lr': self.hparams['lr']})
         # TODO: set require_grad=False for everything else
-        return torch.optim.Adam(parameters_optim,
+        optimizer = torch.optim.Adam(parameters_optim,
                                 weight_decay=self.hparams['l2_reg'])
+        if self.hparams['reduce_factor_lr_schedule']:
+            scheduler = ReduceLROnPlateau(optimizer, factor=self.hparams['reduce_factor_lr_schedule'])
+            return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss_epoch"}
+        else:
+            return optimizer
 
     def training_epoch_end(self, training_step_outputs):
         avg_loss = torch.stack([x['loss']

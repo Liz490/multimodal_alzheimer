@@ -8,14 +8,14 @@ from pet_cnn import Small_PET_CNN, Random_Benchmark_All_CN
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from pytorch_lightning.callbacks import Callback, LearningRateMonitor
+from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 from dataloader import MultiModalDataset
 
 LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'optuna_two_class'
 EXPERIMENT_VERSION = None
 
-lr_monitor = LearningRateMonitor(logging_interval='epoch')
+
 
 class ValidationLossTracker(Callback):
     """
@@ -126,6 +126,16 @@ def train(hparams,
           trial=None):
     pl.seed_everything(5, workers=True)
 
+    # CALLBACKS
+    lr_monitor = LearningRateMonitor(logging_interval='epoch')
+    # checkpoint_callback = ModelCheckpoint(
+    # save_top_k=1,
+    # monitor="val_f1_epoch",
+    # mode="max",
+    # dirpath=experiment_name,
+    # filename="best-run-{epoch:02d}-{val_f1_epoch:.4f}",
+# )
+
     # TRANSFORMS
     normalization_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']}
 
@@ -187,7 +197,7 @@ def train(hparams,
                 mode='min',
                 patience=hparams['early_stopping_patience']),
             val_loss_tracker,
-            lr_monitor
+            lr_monitor,
         ]
     )
     

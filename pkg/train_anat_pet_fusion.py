@@ -11,6 +11,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import math
 from pkg.train_pet_cnn import ValidationLossTracker
 import sys
+from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 
 LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'optuna_pet_mri_fusion_two_class_var'
@@ -66,6 +67,7 @@ def optuna_objective(trial):
         'path_mri': PATH_MRI_CNN,
         'n_classes': 2,
         'gpu_id': 2,
+        'reduce_factor_lr_schedule': None
     }
 
     # Define hyperparameter options and ranges
@@ -115,6 +117,9 @@ def train_anat(hparams, model_pet, model_mri, experiment_name='', experiment_ver
         Validation loss of last epoch
     """
     pl.seed_everything(15, workers=True)
+
+    # CALLBACKS
+    lr_monitor = LearningRateMonitor(logging_interval='epoch')
 
     assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
     if hparams['n_classes'] == 2:
@@ -180,7 +185,9 @@ def train_anat(hparams, model_pet, model_mri, experiment_name='', experiment_ver
                 mode='min',
                 patience=hparams['early_stopping_patience']
             ),
-            val_loss_tracker
+            val_loss_tracker,
+            lr_monitor,
+            ModelCheckpoint(monitor='val_loss_epoch')
         ]
     )
 

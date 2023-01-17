@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import metrics
 import tabpfn
-from tabular_data import data_preparation
+from tabular_models import data_preparation
 import torch
-from pkg.dataloader import MultiModalDataset
+from pkg.utils.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
 
 def train_and_predict(val_data_path, train_data_path, storage_path, binary_classification):

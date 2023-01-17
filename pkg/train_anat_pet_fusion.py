@@ -93,7 +93,7 @@ def optuna_objective(trial):
     
     # Train network
     try:
-        val_loss = train_anat(hparams=hparams,
+        val_loss = train_anat_pet(hparams=hparams,
                               model_pet=MODEL_PET,
                               model_mri=MODEL_MRI,
                               experiment_name=EXPERIMENT_NAME,
@@ -104,7 +104,7 @@ def optuna_objective(trial):
         return math.inf
 
 
-def train_anat(hparams, model_pet, model_mri, experiment_name='', experiment_version=None):
+def train_anat_pet(hparams, model_pet, model_mri, experiment_name='', experiment_version=None):
     """
     Train model for MRI data.
 
@@ -236,4 +236,8 @@ if __name__ == '__main__':
     #     'gpu_id': 6,
     # }
 
-    # train(hparams)
+    train_anat_pet(hparams, 
+                model_pet=MODEL_PET,
+                model_mri=MODEL_MRI,
+                experiment_name='best_runs', 
+                experiment_version='2stage_pet_mri_2_class')

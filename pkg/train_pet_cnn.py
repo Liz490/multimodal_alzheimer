@@ -283,6 +283,6 @@ if __name__ == '__main__':
         'reduce_factor_lr_schedule': 0.5,
     }
 
-    train(hparams, experiment_name='testruns', experiment_version='lr_monitor')
+    train(hparams, experiment_name='best_runs', experiment_version='pet_2_class')
     # train(hparams)
     # TODO rerun with MCI samples

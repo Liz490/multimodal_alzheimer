@@ -53,12 +53,14 @@ class Anat_CNN(pl.LightningModule):
         opts.input_H = 91
         opts.input_D = 109
         opts.model_depth = hparams["resnet_depth"]
-
+        # generate pre-trained resnet
         resnet, _ = generate_model(opts)
         self.model = resnet.module
 
+        # create empty module list that will be filled based on hparams options
         modules = nn.ModuleList()
 
+        # choose resnet depth
         match hparams["resnet_depth"]:
             case 10:
                 n_in = 512

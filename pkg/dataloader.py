@@ -436,10 +436,8 @@ def merge_two_dfs(df1: pd.Series, df2: pd.DataFrame) -> pd.DataFrame:
         self.ds = self.ds.loc[self.ds['label'] != 'MCI']
 
 if __name__ == "__main__":
-    valpath = '/vol/chameleon/projects/adni/adni_1/val_path_data_labels.csv'
-    trainpath = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
-    #trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-    #valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
+    trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
+    valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
     # how to use for PET
     normalization_pet = {'mean': 0.5145, 'std': 0.5383}

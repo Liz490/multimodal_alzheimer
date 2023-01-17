@@ -163,6 +163,15 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
     """
     pl.seed_everything(15, workers=True)
 
+    # CALLBACKS
+    lr_monitor = LearningRateMonitor(logging_interval='epoch')
+
+    assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
+    if hparams['n_classes'] == 2:
+        binary_classification=True
+    else:
+        binary_classification=False
+
     # Setup datasets and dataloaders
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
@@ -208,11 +217,13 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
         devices=1,
         callbacks=[
             EarlyStopping(
-                monitor='val_loss',
+                monitor='val_loss_epoch',
                 mode='min',
                 patience=hparams['early_stopping_patience']
             ),
-            val_loss_tracker
+            val_loss_tracker,
+            lr_monitor,
+            ModelCheckpoint(monitor='val_loss_epoch')
         ]
     )
 

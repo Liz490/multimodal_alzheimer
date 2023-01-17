@@ -52,7 +52,8 @@ class Anat_PET_CNN(pl.LightningModule):
         # self.model_pet_hparams = Small_PET_CNN.load_from_checkpoint(hparams["path_pet"]).hparams
         # self.model_mri_hparams = Anat_CNN.load_from_checkpoint(hparams["path_mri"]).hparams
         # keep everything until flatten for PET and MRI
-        self.model_pet = self.model_pet.model[:-2]
+        
+        self.model_pet = self.model_pet.model[:-3]
         self.model_mri.model.conv_seg = self.model_mri.model.conv_seg[:2]
 
         # Freeze weights in the stage-1 models

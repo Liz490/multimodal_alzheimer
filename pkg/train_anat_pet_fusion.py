@@ -181,7 +181,7 @@ def train_anat(hparams, model_pet, model_mri, experiment_name='', experiment_ver
         devices=1,
         callbacks=[
             EarlyStopping(
-                monitor='val_loss',
+                monitor='val_loss_epoch',
                 mode='min',
                 patience=hparams['early_stopping_patience']
             ),

@@ -193,11 +193,12 @@ def train(hparams,
         devices=1,
         callbacks=[
             EarlyStopping(
-                monitor='val_loss',
+                monitor='val_loss_epoch',
                 mode='min',
                 patience=hparams['early_stopping_patience']),
             val_loss_tracker,
             lr_monitor,
+            ModelCheckpoint(monitor='val_loss_epoch')
         ]
     )
     

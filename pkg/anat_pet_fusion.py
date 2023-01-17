@@ -64,12 +64,15 @@ class Anat_PET_CNN(pl.LightningModule):
         
         
         # linear layers after concatenation
-        self.stage2out = nn.Linear(64 + 512, 64)
+        self.stage2out = nn.Linear(64 + 64, 64)
         self.cls2 = nn.Linear(64, hparams["n_classes"])
 
         # non-linearities
         self.relu = nn.ReLU()
 
+        # equal contributions
+        self.reduce_dim_mri = nn.Sequential(nn.Linear(512, 64), self.relu)
+        
         self.model_fuse = nn.Sequential(self.stage2out, self.relu, self.cls2)
 
 
@@ -91,8 +94,12 @@ class Anat_PET_CNN(pl.LightningModule):
         Inputs:
         - x: PyTorch input Variable
         """
+        bs = x_mri.shape[0]
         out_pet = self.model_pet(x_pet)
         out_mri = self.model_mri(x_mri)
+        out_mri = out_mri.view(bs, -1)
+
+        out_mri = self.reduce_dim_mri(out_mri)
 
         out = torch.cat((out_pet, out_mri), dim=1)
 
@@ -149,6 +156,10 @@ class Anat_PET_CNN(pl.LightningModule):
         parameters_optim = []
         # we only want to optimize the parameters of the fusion model
         for name, param in self.model_fuse.named_parameters():
+            parameters_optim.append({
+                'params': param,
+                'lr': self.hparams['lr']})
+        for name, param in self.reduce_dim_mri.named_parameters():
             parameters_optim.append({
                 'params': param,
                 'lr': self.hparams['lr']})

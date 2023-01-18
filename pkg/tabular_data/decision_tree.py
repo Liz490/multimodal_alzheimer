@@ -8,7 +8,6 @@ import data_preparation
 import os
 from pkg.dataloader import MultiModalDataset
 
-
 def train_decision_tree(val_data_path, train_data_path, balanced='unbalanced'):
     """Trains a decision tree for tabular data
 
@@ -19,13 +18,8 @@ def train_decision_tree(val_data_path, train_data_path, balanced='unbalanced'):
             Returns:
                 Trained decision tree
     """
-
-    trainset_tabular = MultiModalDataset(path=train_data_path, binary_classification = True, modalities=['tabular'])
-    data_train = trainset_tabular.df_tab
-    valset_tabular = MultiModalDataset(path=val_data_path, binary_classification=True, modalities=['tabular'])
-    data_val = valset_tabular.df_tab
-    x_train, y_train = data_preparation.get_data(data_train, True)
-    x_val, y_val = data_preparation.get_data(data_val, True)
+    x_train, y_train = data_preparation.get_data(train_data_path, True)
+    x_val, y_val = data_preparation.get_data(val_data_path, True)
 
     tree_model = DecisionTreeClassifier(criterion='gini', max_depth=5, random_state=1, class_weight=balanced)
     clf = tree_model.fit(x_train, y_train)
@@ -92,8 +86,8 @@ def calculate_statistic(y_val, y_train):
 
 
 if __name__ == "__main__":
-    VAL_DATA_PATH = '/vol/chameleon/projects/adni/adni_1/val_path_data_labels.csv'
-    TRAIN_DATA_PATH = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
-    model = train_decision_tree(VAL_DATA_PATH, TRAIN_DATA_PATH, balanced='balanced')
+    VALPATH = '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/data/val_path_data_labels.csv'
+    TRAINPATH = '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/data/train_path_data_labels.csv'
+    model = train_decision_tree(VALPATH, TRAINPATH, balanced='balanced')
 
 

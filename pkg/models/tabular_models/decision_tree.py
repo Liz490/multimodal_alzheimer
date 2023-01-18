@@ -19,16 +19,8 @@ def train_decision_tree(val_data_path, train_data_path, balanced='unbalanced'):
             Returns:
                 Trained decision tree
     """
-
-    trainset_tabular = MultiModalDataset(path=train_data_path, modalities=['tabular'])
-    data_train = trainset_tabular[0]
-    x_train = data_train['tabular']
-    y_train = data_train['label']
-
-    valset_tabular = MultiModalDataset(path=val_data_path, modalities=['tabular'])
-    data_val = valset_tabular[0]
-    x_val = data_val['tabular']
-    y_val = data_val['label']
+    x_train, y_train = data_preparation.get_data(train_data_path, True)
+    x_val, y_val = data_preparation.get_data(val_data_path, True)
 
     tree_model = DecisionTreeClassifier(criterion='gini', max_depth=5, random_state=1, class_weight=balanced)
     clf = tree_model.fit(x_train, y_train)

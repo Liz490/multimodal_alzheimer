@@ -5,33 +5,34 @@ from the overall Adni-table that contains all the tabular data available.
 Furthermore, it provides a function to exclude/include MCI data.
 
 """
-
+import os
+from torch.utils.data import DataLoader
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
-
 from pkg.utils.dataloader import MultiModalDataset
 
 
-def get_data(data_path, binary_classification):
+BASEPATH = os.getcwd()
+TRAINPATH = os.path.join(BASEPATH, 'data/train_path_data_labels.csv')
+VALPATH = os.path.join(BASEPATH, 'data/val_path_data_labels.csv')
+
+def get_data(path, binary_classification):
     """retrieves training and validation data in suitable format
         Args:
             val_data_path: path to file containins validation data
             train_data_path: path to file containins training data
     """
-    set_tabular = MultiModalDataset(path=data_path, binary_classification=binary_classification,
-                                         modalities=['tabular'])
-    data = set_tabular.df_tab.to_numpy()
+    set = MultiModalDataset(path=path,
+                               binary_classification=binary_classification,modalities=['tabular'])
+    loader = DataLoader(
+        set,
+        batch_size=len(set),
+        shuffle=True,
+        num_workers=32
+    )
 
-    # Omit index, subject-ID, examdate and label and column names
-    samples = np.delete(data, [0, 1, 2, 3, 4, 5, 6], 1)
-    samples = np.delete(samples, 0, axis=0)
-    # Retrieve label
-    labels = data[:, 6]
-    labels = np.delete(labels, 0, axis=0)
-
-    labels = encode_labels(labels)
-
-    return samples, labels
+    batch = next(iter(loader))
+    return batch['tabular'], batch['label']
 
 def encode_labels(labels):
     """Encodes labels (MCI, AD, CN) numerically

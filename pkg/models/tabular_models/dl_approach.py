@@ -13,31 +13,38 @@ import torch
 from pkg.utils.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
 
-def train_and_predict(val_data_path, train_data_path, storage_path, binary_classification):
+def train_and_predict(val_path, train_path, storage_path, binary_classification):
     """Trains the TabPFN classifier for tabular data
             Args:
                 val_data_path: path to file containins validation data
                 train_data_path: path to file containins training data
     """
 
-    classifier = train(train_data_path, binary_classification)
+    x_train, y_train = get_data(train_path, binary_classification=binary_classification)
+    classifier = train(x_train, y_train)
 
-    x_val, y_val = data_preparation.get_data(val_data_path, binary_classification)
+    x_val, y_val = get_data(val_path, binary_classification=binary_classification)
     y_eval, p_eval = classifier.predict(x_val, return_winning_probability=True)
+
+    y_eval_train = classifier.predict(x_train, return_winning_probability=False)
 
     # Display metrics
     metrics.ConfusionMatrixDisplay.from_predictions(y_val, y_eval, cmap='Blues', colorbar=False,
-                                                    display_labels=('NC', 'AD'))
+                                                    display_labels=('NC_val', 'AD_val'))
+
+    metrics.ConfusionMatrixDisplay.from_predictions(y_val, y_eval, cmap='Blues', colorbar=False,
+                                                    display_labels=('NC_train', 'AD_train'))
     plt.show()
-    f1_score = metrics.f1_score(y_val, y_eval)
-    print(f"F1-score: {f1_score}")
+    f1_score_val = metrics.f1_score(y_val, y_eval)
+    f1_score_train = metrics.f1_score(y_train, y_eval_train)
+    print(f"validation F1-score: {f1_score_val}")
+    print(f"training F1-score: {f1_score_train}")
 
     # Save model
-    torch.save({'model_state_dict': classifier.model[2].state_dict(), 'tabular_baseline_F1':f1_score}, storage_path)
+    torch.save({'model_state_dict': classifier.model[2].state_dict(), 'tabular_baseline_F1':f1_score_train}, storage_path)
     return classifier
 
-def train(x_train, y_train, binary_classification):
-    #x_train, y_train = data_preparation.get_data(train_data_path, binary_classification)
+def train(x_train, y_train):
 
     # N_ensemble_configurations defines how many estimators are averaged, it is bounded by #features * #classes,
     # more ensemble members are slower, but more accurate
@@ -63,36 +70,31 @@ def load_model(path, binary_classification = True):
         Returns:
             TabPFNlassifier with stored weights
     """
-    VAL_PATH = '/vol/chameleon/projects/adni/adni_1/val_path_data_labels.csv'
-    TRAIN_PATH = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
-    """def load():
-        classifier = tabpfn.TabPFNClassifier(device='cuda', N_ensemble_configurations=4)
-        checkpoint = torch.load(path)
-        classifier.model[2].load_state_dict(checkpoint['model_state_dict'])
-        return classifier
-    try:
-        classifier = load()
-    except:
-    print('No pre-trained model available. \n Train model')
-    """
-    classifier = train_and_predict(VAL_PATH, TRAIN_PATH, path, binary_classification)
+    x_train, y_train = get_data(path, binary_classification=binary_classification)
+    classifier = train(x_train, y_train)
     return classifier
 
+
+def get_avg_activation(activations):
+    output = None
+    for i in range(4):
+        activ_ = activations[:, i:i + 1, :]
+        output = activ_ if output is None else output + activ_
+    output = output / 4
+    output = torch.transpose(output, 0, 1).squeeze()
+    return output
 
 if __name__ == '__main__':
     VAL_PATH = '/vol/chameleon/projects/adni/adni_1/val_path_data_labels.csv'
     TRAIN_PATH = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
     STORAGE_PATH = '/vol/chameleon/projects/adni/adni_1/trained_models/tabular_baseline.pth'
-    train_and_predict(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True)
-
     # Example usage how to extract probabilities of TabPFN
     # load classifier
     #classifier = load_model(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True)
-    classifier = train(TRAIN_PATH, True)
+    classifier = train_and_predict(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True)
 
-    valset = MultiModalDataset(path=VAL_PATH,
-                               modalities=['tabular'],
-                               binary_classification=True)
+    X_val, Y_val = get_data(VAL_PATH, True)
+    X_train, Y_train = get_data(TRAIN_PATH, True)
 
     valloader = DataLoader(
         valset,

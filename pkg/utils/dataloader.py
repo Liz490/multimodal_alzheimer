@@ -277,8 +277,7 @@ class MultiModalDataset(Dataset):
 
         data['mri'] = mri_data
 
-        #########################################################################################################
-        # STILL TODO!!!!!
+        
         ###########
         # TABULAR #
         ########### 
@@ -287,7 +286,7 @@ class MultiModalDataset(Dataset):
             tabular_data = None
         else:
             # ICV
-            icv = sample['ICV']
+            icv = sample['ICV'] # intracranial volume
             # features normalized 
             age = sample['AGE']
             pteducat = sample['PTEDUCAT']
@@ -295,14 +294,13 @@ class MultiModalDataset(Dataset):
             hippocamp = sample['Hippocampus']
             whole_brain = sample['PTEDUCAT']
             entorhinal = sample['Entorhinal']
-            fusiform = sample['Fusiform']
-            mid_temp = sample['MidTemp']
+            fusiform = sample['Fusiform'] # fusiform gyrus
+            mid_temp = sample['MidTemp'] # Middle temporal gyru
 
             tabular_data = torch.tensor([age, pteducat, ventr, hippocamp, whole_brain, entorhinal, fusiform, mid_temp, icv])
 
         data['tabular'] = tabular_data
-        # STILL TODO!!!!!
-        #########################################################################################################
+        
 
         #########
         # LABEL #
@@ -461,29 +459,4 @@ if __name__ == "__main__":
 
 
 
-    # # normalize_pet: None or dict with 'mean' and 'std'
-    # std_all_scans = {'mean': 9.8, 'std': 8.2}
-    # norm_mri = {'all_scan_norm': std_all_scans}
-    # path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-    # dataset = MultiModalDataset(path=path, modalities=['t1w'], normalize_mri=norm_mri)
-    # print(len(dataset))
-    # d = dataset[6]
-    # print(d['pet1451'].shape)
-    # print(d['mri'].shape)
-    # print(d['tabular'])
-    # print(d['label'])
-    # # x, y = dataset[3]
-    # # print(x.shape)
-    # # print(y)
-    # mri_data = d['mri']
-    # # print(mri_data[55,55,55])
-    # # print(mri_data.min())
-    # # print(mri_data.max())
-    # # bins = 100
-    # # hist = torch.histc(mri_data, bins=bins, min=0, max=1)
-    # sns.histplot(mri_data.reshape(-1).numpy(), bins=20)
-    # plt.savefig('tst')
-    # # x = range(0,1,0.01)
-    # # plt.bar(x, hist, align='center')
-    # # plt.xlabel('Bins)
-    # # plt.show()
+

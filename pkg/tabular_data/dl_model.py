@@ -28,7 +28,7 @@ class IntHandler:
         handlebox.add_artist(text)
         return text
 
-class Tabular_MRT_MOdel(pl.LightningModule):
+class Tabular_MRT_Model(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
         self.save_hyperparameters(hparams)

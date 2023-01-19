@@ -4,7 +4,7 @@ import math
 from pathlib import Path
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
-from pet_cnn import Small_PET_CNN, Random_Benchmark_All_CN
+from pkg.models.pet_models.pet_cnn import Small_PET_CNN, Random_Benchmark_All_CN
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping

@@ -11,7 +11,7 @@ from pkg.models.pet_models.train_pet_cnn import ValidationLossTracker
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'optuna_mri_two_class_var_resnet'
+EXPERIMENT_NAME = ''
 EXPERIMENT_VERSION = None
 
 

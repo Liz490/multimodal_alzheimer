@@ -5,6 +5,7 @@ MedicalNet/
 lightning_logs/
 kfold_checkpoints/
 .tensorboard-info/
+pkg/inference/confusion_matrices/
 
 
 # IDEs

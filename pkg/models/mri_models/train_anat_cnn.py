@@ -236,7 +236,7 @@ def optuna_optimization():
     """
     study = optuna.create_study(direction="minimize")
     seconds_per_day = 24 * 60 * 60
-    study.optimize(optuna_objective, n_trials=1, timeout=7*seconds_per_day)
+    study.optimize(optuna_objective, n_trials=300, timeout=7*seconds_per_day)
 
 
 if __name__ == '__main__':

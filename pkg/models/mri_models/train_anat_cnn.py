@@ -47,7 +47,9 @@ def optuna_objective(trial):
     Returns:
         Validation loss of last epoch
     """
-
+    gpu_id = os.getenv('CUDA_VISIBLE_DEVICES')
+    if not gpu_id:
+        raise ValueError('No gpu specified! Please select "export CUDA_VISIBLE_DEVICES=<device_id>')
     # Define fixed parameters
     hparams = {
         'early_stopping_patience': 5,
@@ -57,7 +59,7 @@ def optuna_objective(trial):
         'norm_mean_val': 418.4120,
         'norm_std_val': 830.2466,
         'n_classes': 2,
-        'gpu_id': 6,
+        'gpu_id': gpu_id,
         'reduce_factor_lr_schedule': None
     }
 

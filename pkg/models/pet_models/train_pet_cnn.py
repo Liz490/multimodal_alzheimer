@@ -266,23 +266,41 @@ if __name__ == '__main__':
     #     'linear_out': 64
     # }
 
-    # Best two class retrain # version 33
+    # # Best two class retrain # version 33
+    # hparams = {
+    #     'early_stopping_patience': 30,
+    #     'max_epochs': 300,
+    #     'norm_mean': 0.5145,
+    #     'norm_std': 0.5383,
+    #     'lr': 0.0009905814208136547,
+    #     'batch_size': 64,
+    #     'conv_out': [8, 16, 32, 64],
+    #     'filter_size': [5, 5, 3, 3],
+    #     'batchnorm': False,
+    #     'n_classes': 2,
+    #     'linear_out': 64,
+    #     'fl_gamma': 5,
+    #     'reduce_factor_lr_schedule': 0.5,
+    # }
+
+    # Best three class retrain # version 242
     hparams = {
         'early_stopping_patience': 30,
         'max_epochs': 300,
         'norm_mean': 0.5145,
         'norm_std': 0.5383,
-        'lr': 0.0009905814208136547,
-        'batch_size': 64,
-        'conv_out': [8, 16, 32, 64],
-        'filter_size': [5, 5, 3, 3],
+        'lr': 0.00033794149987098827,
+        'batch_size': 8,
+        'conv_out': [32, 64, 128, 256],
+        'filter_size': [3, 3, 3, 3],
         'batchnorm': False,
-        'n_classes': 2,
-        'linear_out': 64,
-        'fl_gamma': 5,
-        'reduce_factor_lr_schedule': 0.5,
+        'n_classes': 3,
+        'linear_out': False,
+        'fl_gamma': None,
+        'reduce_factor_lr_schedule': 0.1,
+        'dropout_dense': 0.21363966441054527
     }
 
-    train(hparams, experiment_name='test_runs', experiment_version='pet_2_class')
+    train(hparams, experiment_name='best_runs', experiment_version='pet_3_class')
     # train(hparams)
     # TODO rerun with MCI samples

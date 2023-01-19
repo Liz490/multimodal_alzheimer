@@ -1,16 +1,16 @@
 import os
 import torch
-from dataloader import MultiModalDataset
+from pkg.utils.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
-from pkg.anat_cnn import Anat_CNN
+from pet_resnet_cnn import PET_CNN_ResNet
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import math
-from pkg.train_pet_cnn import ValidationLossTracker
+from train_pet_cnn import ValidationLossTracker
 
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'optuna_mri_two_class_var_resnet'
+EXPERIMENT_NAME = 'optuna_pet_two_class_var_resnet'
 EXPERIMENT_VERSION = None
 
 
@@ -51,12 +51,10 @@ def optuna_objective(trial):
     hparams = {
         'early_stopping_patience': 5,
         'max_epochs': 20,
-        'norm_mean_train': 413.6510,
-        'norm_std_train': 918.5371,
-        'norm_mean_val': 418.4120,
-        'norm_std_val': 830.2466,
+        'norm_mean': 0.5145,
+        'norm_std': 0.5383,
         'n_classes': 2,
-        'gpu_id': 6,
+        'gpu_id': 3,
     }
 
     def generate_linear_block_options(first_layer_options: list,
@@ -91,7 +89,6 @@ def optuna_objective(trial):
     lr_max = 1e-2
     lr_pretrained_min = 1e-7
     lr_pretrained_max = 1e-5
-    q_options = [0.95, 0.98, 0.99, 1]
     gamma_options = [None, 1, 2, 5]
     resnet_options = [10, 18, 50]
     dense_out_options_index, dense_out_options_dict = options_list_to_dict(
@@ -121,8 +118,6 @@ def optuna_objective(trial):
         hparams['early_stopping_patience'] = 10
         hparams['max_epochs'] = 50
     hparams['l2_reg'] = trial.suggest_categorical('l2_reg', l2_options)
-    hparams['norm_percentile'] = trial.suggest_categorical('norm_percentile',
-                                                           q_options)
     hparams['fl_gamma'] = trial.suggest_categorical('fl_gamma', gamma_options)
     hparams['resnet_depth'] = trial.suggest_categorical('resnet_depth',
                                                         resnet_options)
@@ -136,7 +131,7 @@ def optuna_objective(trial):
 
     # Train network
     try:
-        val_loss = train_anat(hparams,
+        val_loss = train_pet_resnet(hparams,
                               experiment_name=EXPERIMENT_NAME,
                               experiment_version=EXPERIMENT_VERSION)
         return val_loss
@@ -145,9 +140,9 @@ def optuna_objective(trial):
         return math.inf
 
 
-def train_anat(hparams, experiment_name='', experiment_version=None):
+def train_pet_resnet(hparams, experiment_name='', experiment_version=None):
     """
-    Train model for MRI data.
+    Train model for PET data.
 
     Args:
         hparams: A dictionary of hyperparameters
@@ -159,16 +154,27 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
     """
     pl.seed_everything(15, workers=True)
 
+    # TRANSFORMS
+    normalization_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']}
+
+    assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
+    if hparams['n_classes'] == 2:
+        binary_classification=True
+    else:
+        binary_classification=False
+    
     # Setup datasets and dataloaders
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
-    trainset = MultiModalDataset(
-        path=trainpath, modalities=['t1w'], normalize_mri={'per_scan_norm': 'min_max'},
-        binary_classification=True, quantile=hparams['norm_percentile'])
-    valset = MultiModalDataset(
-        path=valpath, modalities=['t1w'], normalize_mri={'per_scan_norm': 'min_max'},
-        binary_classification=True, quantile=hparams['norm_percentile'])
+    trainset = MultiModalDataset(path=trainpath, 
+                                modalities=['pet1451'],
+                                normalize_pet=normalization_pet,
+                                binary_classification=binary_classification)
+    valset = MultiModalDataset(path=valpath,
+                            modalities=['pet1451'],
+                            normalize_pet=normalization_pet,
+                            binary_classification=binary_classification)
 
     trainloader = DataLoader(
         trainset,
@@ -186,9 +192,8 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
     # Get class distribution of the trainset for weighted loss
     _, weight_normalized = trainset.get_label_distribution()
     hparams['loss_class_weights'] = 1 - weight_normalized
-    hparams['loss_class_weights_human_readable'] = hparams['loss_class_weights'].tolist()  # original hparam is a Tensor that isn't stored in human readable format
 
-    model = Anat_CNN(hparams=hparams)
+    model = PET_CNN_ResNet(hparams=hparams)
 
     tb_logger = pl.loggers.TensorBoardLogger(
         save_dir='lightning_logs',
@@ -223,23 +228,21 @@ def optuna_optimization():
     """
     study = optuna.create_study(direction="minimize")
     seconds_per_day = 24 * 60 * 60
-    study.optimize(optuna_objective, n_trials=1, timeout=7*seconds_per_day)
+    study.optimize(optuna_objective, n_trials=300, timeout=7*seconds_per_day)
 
 
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    # optuna_optimization()
+    optuna_optimization()
     #####################
 
-    # Experimental hyperparameters
+    # # Experimental hyperparameters
     # hparams = {
     #     'early_stopping_patience': 5,
     #     'max_epochs': 20,
-    #     'norm_mean_train': 413.6510,
-    #     'norm_std_train': 918.5371,
-    #     'norm_mean_val': 418.4120,
-    #     'norm_std_val': 830.2466,
+    #     'norm_mean': 0.5145,
+    #     'norm_std': 0.5383,
     #     'n_classes': 2,
     #     'lr': 1e-4,
     #     'batch_size': 64,
@@ -253,33 +256,8 @@ if __name__ == '__main__':
     #     'l2_reg': 1e-2,
     #     # 'linear_out': [256, 256, 256],
     #     'linear_out': [],
-    #     'norm_percentile': 0.99,
     #     'resnet_depth': 18,
-    #     'gpu_id': 6,
+    #     'gpu_id': 3,
     # }
 
-    # Best two class
-    hparams = {
-        'early_stopping_patience': 10,
-        'max_epochs': 50,
-        'norm_mean_train': 413.6510,
-        'norm_std_train': 918.5371,
-        'norm_mean_val': 418.4120,
-        'norm_std_val': 830.2466,
-        'n_classes': 2,
-        'lr': 1.2478982228687482e-05,
-        'batch_size': 64,
-        'fl_gamma': 5,
-        'conv_out': [],
-        'filter_size': [],
-        'lr_pretrained': 1.3931116859572868e-06,
-        'batchnorm_begin': False,
-        'batchnorm_dense': True,
-        'l2_reg': 0,
-        'linear_out': [],
-        'norm_percentile': 0.95,
-        'resnet_depth': 18,
-        'gpu_id': 6,
-    }
-
-    train_anat(hparams, experiment_name='')
+    # train_pet_resnet(hparams)

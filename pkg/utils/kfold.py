@@ -39,7 +39,7 @@ import torch
 from dataloader import PETAV1451Dataset
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
-from pet_cnn import Small_PET_CNN
+from pkg.models.pet_models.pet_cnn import Small_PET_CNN
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from torchmetrics.classification import MulticlassF1Score

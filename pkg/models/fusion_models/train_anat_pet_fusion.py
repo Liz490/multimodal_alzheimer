@@ -1,17 +1,30 @@
 import os
 import torch
-from dataloader import MultiModalDataset
+from pkg.utils.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
-from pkg.pet_resnet_cnn import PET_CNN_ResNet
+from pkg.models.mri_models.anat_cnn import Anat_CNN
+from pkg.models.pet_models.pet_cnn import Small_PET_CNN
+from anat_pet_fusion import Anat_PET_CNN
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import math
-from pkg.train_pet_cnn import ValidationLossTracker
+from pkg.models.pet_models.pet_cnn import ValidationLossTracker
+import sys
+from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 
+# tensorboard and checkpoint logging
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'optuna_pet_two_class_var_resnet'
+EXPERIMENT_NAME = 'optuna_pet_mri_fusion_two_class'
 EXPERIMENT_VERSION = None
+
+# PET and MRI models
+BASEPATH = os.getcwd()
+PATH_PET_CNN = os.path.join(BASEPATH, 'lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt')
+PATH_MRI_CNN = os.path.join(BASEPATH, 'lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt')
+# load checkpoints
+MODEL_PET = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN)
+MODEL_MRI = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN)
 
 
 def options_list_to_dict(options: list) -> tuple[list, dict]:
@@ -51,65 +64,23 @@ def optuna_objective(trial):
     hparams = {
         'early_stopping_patience': 5,
         'max_epochs': 20,
-        'norm_mean': 0.5145,
-        'norm_std': 0.5383,
+        'path_pet': PATH_PET_CNN,
+        'path_mri': PATH_MRI_CNN,
         'n_classes': 2,
-        'gpu_id': 3,
+        'gpu_id': 2,
+        'reduce_factor_lr_schedule': None
     }
-
-    def generate_linear_block_options(first_layer_options: list,
-                                      n_layers_options: list) -> list[tuple]:
-        """
-        Generate options for the shape of the linear classification layers.
-
-        Args:
-            first_layer_options: Options for the size of the first layer
-            n_layers_options: Options for the number of layers
-
-        Returns:
-            List of tuples representing the layer sizes of the dense
-            block at the end of the network
-        """
-        dense_out_options = []
-        for x in first_layer_options:
-            for n in n_layers_options:
-                # Add option with the same size for all layers
-                layers = tuple([x for _ in range(n)])
-                dense_out_options.append(layers)
-
-                # Add option with each layer half the size of the previous
-                layers_shrinking = tuple([int(x / 2**i) for i in range(n)])
-                dense_out_options.append(layers_shrinking)
-        return dense_out_options
 
     # Define hyperparameter options and ranges
     batch_size_options = [8, 16, 32, 64]
     l2_options = [0, 1e-1, 1e-2, 1e-3]
     lr_min = 1e-5
     lr_max = 1e-2
-    lr_pretrained_min = 1e-7
-    lr_pretrained_max = 1e-5
     gamma_options = [None, 1, 2, 5]
-    resnet_options = [10, 18, 50]
-    dense_out_options_index, dense_out_options_dict = options_list_to_dict(
-        generate_linear_block_options([256, 128, 64], [0, 3])
-    )
+    
 
     # Let optuna select hyperparameters based on options defined above
     hparams['lr'] = trial.suggest_float('lr', lr_min, lr_max, log=True)
-    freeze = trial.suggest_categorical('freeze', (True, False))
-    if not freeze:
-        # Only set lr_pretrained if optuna selected freeze=False
-        hparams['lr_pretrained'] = trial.suggest_float(
-            'lr_pretrained', lr_pretrained_min, lr_pretrained_max, log=True)
-    else:
-        hparams['lr_pretrained'] = None
-    hparams['conv_out'] = []
-    hparams['filter_size'] = []
-    hparams['batchnorm_begin'] = trial.suggest_categorical('batchnorm_begin',
-                                                           (True, False))
-    hparams['batchnorm_dense'] = trial.suggest_categorical('batchnorm_dense',
-                                                           (True, False))
     hparams['batch_size'] = trial.suggest_categorical('batch_size',
                                                       batch_size_options)
     if hparams['batch_size'] >= 64:
@@ -118,20 +89,14 @@ def optuna_objective(trial):
         hparams['early_stopping_patience'] = 10
         hparams['max_epochs'] = 50
     hparams['l2_reg'] = trial.suggest_categorical('l2_reg', l2_options)
+    # gamma parameter for focal loss
     hparams['fl_gamma'] = trial.suggest_categorical('fl_gamma', gamma_options)
-    hparams['resnet_depth'] = trial.suggest_categorical('resnet_depth',
-                                                        resnet_options)
-
-    # For shape of linear layers let optuna select the string representation
-    # of the option and then set the hyperparameter dictionary entry based on
-    # this.
-    dense_out_idx = trial.suggest_categorical('linear_out',
-                                              dense_out_options_index)
-    hparams['linear_out'] = dense_out_options_dict[dense_out_idx]
 
     # Train network
     try:
-        val_loss = train_pet_resnet(hparams,
+        val_loss = train_anat_pet(hparams=hparams,
+                              model_pet=MODEL_PET,
+                              model_mri=MODEL_MRI,
                               experiment_name=EXPERIMENT_NAME,
                               experiment_version=EXPERIMENT_VERSION)
         return val_loss
@@ -140,9 +105,9 @@ def optuna_objective(trial):
         return math.inf
 
 
-def train_pet_resnet(hparams, experiment_name='', experiment_version=None):
+def train_anat_pet(hparams, model_pet, model_mri, experiment_name='', experiment_version=None):
     """
-    Train model for PET data.
+    Train model for MRI data.
 
     Args:
         hparams: A dictionary of hyperparameters
@@ -152,23 +117,37 @@ def train_pet_resnet(hparams, experiment_name='', experiment_version=None):
     Returns:
         Validation loss of last epoch
     """
+    # fix random seeds for reproducability
     pl.seed_everything(15, workers=True)
 
-    # TRANSFORMS
-    normalization_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']}
+    # CALLBACKS
+    lr_monitor = LearningRateMonitor(logging_interval='epoch')
 
+    assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
+    if hparams['n_classes'] == 2:
+        binary_classification=True
+    else:
+        binary_classification=False
+    
+    
     # Setup datasets and dataloaders
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
-    trainset = MultiModalDataset(path=trainpath, 
-                                modalities=['pet1451'],
-                                normalize_pet=normalization_pet,
-                                binary_classification=True)
-    valset = MultiModalDataset(path=valpath,
-                            modalities=['pet1451'],
-                            normalize_pet=normalization_pet,
-                            binary_classification=True)
+    trainset = MultiModalDataset(
+        path=trainpath, 
+        modalities=['pet1451', 't1w'], 
+        normalize_mri={'per_scan_norm': 'min_max'},
+        normalize_pet={'mean': model_pet.hparams['norm_mean'], 'std': model_pet.hparams['norm_std']},
+        binary_classification=binary_classification, 
+        quantile=model_mri.hparams['norm_percentile'])
+    valset = MultiModalDataset(
+        path=valpath, 
+        modalities=['pet1451', 't1w'], 
+        normalize_mri={'per_scan_norm': 'min_max'},
+        normalize_pet = {'mean': model_pet.hparams['norm_mean'], 'std': model_pet.hparams['norm_std']},
+        binary_classification=binary_classification, 
+        quantile=model_mri.hparams['norm_percentile'])
 
     trainloader = DataLoader(
         trainset,
@@ -187,7 +166,7 @@ def train_pet_resnet(hparams, experiment_name='', experiment_version=None):
     _, weight_normalized = trainset.get_label_distribution()
     hparams['loss_class_weights'] = 1 - weight_normalized
 
-    model = PET_CNN_ResNet(hparams=hparams)
+    model = Anat_PET_CNN(hparams=hparams)
 
     tb_logger = pl.loggers.TensorBoardLogger(
         save_dir='lightning_logs',
@@ -204,11 +183,13 @@ def train_pet_resnet(hparams, experiment_name='', experiment_version=None):
         devices=1,
         callbacks=[
             EarlyStopping(
-                monitor='val_loss',
+                monitor='val_loss_epoch',
                 mode='min',
                 patience=hparams['early_stopping_patience']
             ),
-            val_loss_tracker
+            val_loss_tracker,
+            lr_monitor,
+            ModelCheckpoint(monitor='val_loss_epoch')
         ]
     )
 
@@ -228,30 +209,29 @@ def optuna_optimization():
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    optuna_optimization()
+    #optuna_optimization()
     #####################
 
-    # # Experimental hyperparameters
-    # hparams = {
-    #     'early_stopping_patience': 5,
-    #     'max_epochs': 20,
-    #     'norm_mean': 0.5145,
-    #     'norm_std': 0.5383,
-    #     'n_classes': 2,
-    #     'lr': 1e-4,
-    #     'batch_size': 64,
-    #     'fl_gamma': 2,
-    #     # 'conv_out': [],
-    #     # 'filter_size': [5, 5],
-    #     'lr_pretrained': 1e-5,
-    #     'batchnorm_begin': True,
-    #     # 'batchnorm_conv': True,
-    #     'batchnorm_dense': True,
-    #     'l2_reg': 1e-2,
-    #     # 'linear_out': [256, 256, 256],
-    #     'linear_out': [],
-    #     'resnet_depth': 18,
-    #     'gpu_id': 3,
-    # }
+    # fine-tune best run (version 56)
+    hparams = {
+        'early_stopping_patience': 30,
+        'max_epochs': 300,
+        'norm_mean_train': 413.6510,
+        'norm_std_train': 918.5371,
+        'norm_mean_val': 418.4120,
+        'norm_std_val': 830.2466,
+        'n_classes': 2,
+        'lr': 0.0008678312514285887,
+        'batch_size': 32,
+        'fl_gamma': 5,
+        'l2_reg': 0,
+        'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
+        'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt',
+        'reduce_factor_lr_schedule': 0.1
+    }
 
-    # train_pet_resnet(hparams)
+    train_anat_pet(hparams, 
+                model_pet=MODEL_PET,
+                model_mri=MODEL_MRI,
+                experiment_name='best_runs', 
+                experiment_version='2stage_pet_mri_2_class')

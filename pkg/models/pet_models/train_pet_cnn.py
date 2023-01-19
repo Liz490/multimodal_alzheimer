@@ -4,16 +4,17 @@ import math
 from pathlib import Path
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Normalize
-from pet_cnn import Small_PET_CNN, Random_Benchmark_All_CN
+from pkg.models.pet_models.pet_cnn import Small_PET_CNN, Random_Benchmark_All_CN
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from pytorch_lightning.callbacks import Callback
-from dataloader import MultiModalDataset
+from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
+from pkg.utils.dataloader import MultiModalDataset
 
 LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'optuna_two_class'
 EXPERIMENT_VERSION = None
+
 
 
 class ValidationLossTracker(Callback):
@@ -39,6 +40,7 @@ def optuna_just_sampling(trial):
     lr_min = 5e-6
     lr_max = 1e-3
     batch_size_options = [8, 16, 32, 64]
+    gamma_options = [None, 1, 2, 5]
 
     # Dynamic generation of conv_out options
     conv_out_first_options = [8, 16, 32]
@@ -77,7 +79,8 @@ def optuna_just_sampling(trial):
         'max_epochs': 20,
         'norm_mean': 0.5145,
         'norm_std': 0.5383,
-        'n_classes': 2
+        'reduce_factor_lr_schedule': None,
+        'n_classes': 3
     }
     hparams['lr'] = trial.suggest_float(
         'learning_rate', lr_min, lr_max, log=True)
@@ -105,6 +108,7 @@ def optuna_just_sampling(trial):
         hparams['dropout_dense'] = trial.suggest_float(
             'dropout_dense_p', dropout_dense_min, dropout_dense_max)
 
+    hparams['fl_gamma'] = trial.suggest_categorical('fl_gamma', gamma_options)
     # Train network
     try:
         val_loss = train(hparams,
@@ -122,8 +126,24 @@ def train(hparams,
           trial=None):
     pl.seed_everything(5, workers=True)
 
+    # CALLBACKS
+    lr_monitor = LearningRateMonitor(logging_interval='epoch')
+    # checkpoint_callback = ModelCheckpoint(
+    # save_top_k=1,
+    # monitor="val_f1_epoch",
+    # mode="max",
+    # dirpath=experiment_name,
+    # filename="best-run-{epoch:02d}-{val_f1_epoch:.4f}",
+# )
+
     # TRANSFORMS
     normalization_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']}
+
+    assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
+    if hparams['n_classes'] == 2:
+        binary_classification=True
+    else:
+        binary_classification=False
 
     # DATASET AND DATALOADER
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
@@ -133,11 +153,11 @@ def train(hparams,
     trainset = MultiModalDataset(path=trainpath, 
                                 modalities=['pet1451'],
                                 normalize_pet=normalization_pet,
-                                binary_classification=True)
+                                binary_classification=binary_classification)
     valset = MultiModalDataset(path=valpath,
                             modalities=['pet1451'],
                             normalize_pet=normalization_pet,
-                            binary_classification=True)
+                            binary_classification=binary_classification)
 
 
 
@@ -173,13 +193,15 @@ def train(hparams,
         devices=1,
         callbacks=[
             EarlyStopping(
-                monitor='val_loss',
+                monitor='val_loss_epoch',
                 mode='min',
                 patience=hparams['early_stopping_patience']),
-            val_loss_tracker
+            val_loss_tracker,
+            lr_monitor,
+            ModelCheckpoint(monitor='val_loss_epoch')
         ]
     )
-
+    
     trainer.fit(model, trainloader, valloader)
     return val_loss_tracker.val_loss[-1]
 
@@ -214,19 +236,71 @@ if __name__ == '__main__':
     # hparams["n_classes"] = 2
 
 
-    # Best two class:
+    # # Best two class:
+    # hparams = {
+    #     'early_stopping_patience': 10,
+    #     'max_epochs': 50,
+    #     'norm_mean': 0.5145,
+    #     'norm_std': 0.5383,
+    #     'lr': 0.00075356,
+    #     'batch_size': 64,
+    #     'conv_out': [8, 16, 32, 64],
+    #     'filter_size': [3, 3, 3, 3],
+    #     'batchnorm': False,
+    #     'n_classes': 2,
+    #     'linear_out': 64
+    # }
+
+    # Best two class with batchnorm
+    # hparams = {
+    #     'early_stopping_patience': 10,
+    #     'max_epochs': 50,
+    #     'norm_mean': 0.5145,
+    #     'norm_std': 0.5383,
+    #     'lr': 0.00075356,
+    #     'batch_size': 64,
+    #     'conv_out': [8, 16, 32, 64],
+    #     'filter_size': [3, 3, 3, 3],
+    #     'batchnorm': True,
+    #     'n_classes': 2,
+    #     'linear_out': 64
+    # }
+
+    # # Best two class retrain # version 33
+    # hparams = {
+    #     'early_stopping_patience': 30,
+    #     'max_epochs': 300,
+    #     'norm_mean': 0.5145,
+    #     'norm_std': 0.5383,
+    #     'lr': 0.0009905814208136547,
+    #     'batch_size': 64,
+    #     'conv_out': [8, 16, 32, 64],
+    #     'filter_size': [5, 5, 3, 3],
+    #     'batchnorm': False,
+    #     'n_classes': 2,
+    #     'linear_out': 64,
+    #     'fl_gamma': 5,
+    #     'reduce_factor_lr_schedule': 0.5,
+    # }
+
+    # Best three class retrain # version 242
     hparams = {
-        'early_stopping_patience': 10,
-        'max_epochs': 50,
+        'early_stopping_patience': 30,
+        'max_epochs': 300,
         'norm_mean': 0.5145,
         'norm_std': 0.5383,
-        'lr': 0.0007535639617863388,
-        'batch_size': 64,
-        'conv_out': [8, 16, 32, 64],
+        'lr': 0.00033794149987098827,
+        'batch_size': 8,
+        'conv_out': [32, 64, 128, 256],
         'filter_size': [3, 3, 3, 3],
         'batchnorm': False,
-        'n_classes': 2,
-        'linear_out': 64
+        'n_classes': 3,
+        'linear_out': False,
+        'fl_gamma': None,
+        'reduce_factor_lr_schedule': 0.1,
+        'dropout_dense': 0.21363966441054527
     }
 
-    train(hparams, experiment_name='')
+    train(hparams, experiment_name='best_runs', experiment_version='pet_3_class')
+    # train(hparams)
+    # TODO rerun with MCI samples

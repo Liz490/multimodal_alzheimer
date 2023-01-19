@@ -17,7 +17,8 @@ from MedicalNet.model import generate_model
 from MedicalNet.setting import parse_opts
 import sys
 
-from focalloss import FocalLoss
+from pkg.loss_functions.focalloss import FocalLoss
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 class IntHandler:
     """
@@ -31,9 +32,9 @@ class IntHandler:
         return text
 
 
-class PET_CNN_ResNet(pl.LightningModule):
+class Anat_CNN(pl.LightningModule):
 
-    def __init__(self, hparams):
+    def __init__(self, hparams, gpu_id=None):
         super().__init__()
         self.save_hyperparameters(hparams, ignore=["gpu_id"])
         if hparams["n_classes"] == 3:
@@ -44,17 +45,22 @@ class PET_CNN_ResNet(pl.LightningModule):
         # Initialize Model
         opts = parse_opts()
         opts.pretrain_path = f'/vol/chameleon/projects/adni/adni_1/MedicalNet/pretrain/resnet_{hparams["resnet_depth"]}_23dataset.pth'
-        opts.gpu_id = [hparams["gpu_id"]]
+        if gpu_id:
+            opts.gpu_id = [str(gpu_id)]
+        else:
+            opts.gpu_id = [hparams["gpu_id"]]
         opts.input_W = 91
         opts.input_H = 91
         opts.input_D = 109
         opts.model_depth = hparams["resnet_depth"]
-
+        # generate pre-trained resnet
         resnet, _ = generate_model(opts)
         self.model = resnet.module
 
+        # create empty module list that will be filled based on hparams options
         modules = nn.ModuleList()
 
+        # choose resnet depth
         match hparams["resnet_depth"]:
             case 10:
                 n_in = 512
@@ -137,21 +143,15 @@ class PET_CNN_ResNet(pl.LightningModule):
         torch.save(self, path)
 
     def general_step(self, batch, batch_idx, mode):
-        x = batch['pet1451']
+        x = batch['mri']
         y = batch['label']
         x = x.unsqueeze(1)
         x = x.to(dtype=torch.float32)
         y_hat = self.forward(x).to(dtype=torch.double)
-        # print(y_hat.shape)
-        # print(sys.exit())
-        # print(f'ground truth: {y}')
-        if mode == 'train':
-            # print(f'pred {torch.argmax(y_hat, dim=1)}, gt {y}')
-            sftmx = nn.Softmax(dim=1)
-            # y_hat_sftmx = sftmx(y_hat)
-            # print(f'pred prob {torch.max(y_hat_sftmx, dim=1)}')
+        
         loss = self.criterion(y_hat, y)
-        self.log(mode + '_loss', loss, on_step=True, prog_bar=True)
+        if mode != 'pred':
+            self.log(mode + '_loss', loss, on_step=True, prog_bar=True)
         if mode == 'val':
             self.f1_score_val(y_hat, y)
         elif mode == 'train':
@@ -165,6 +165,9 @@ class PET_CNN_ResNet(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         return self.general_step(batch, batch_idx, "val")
+    
+    def predict_step(self, batch, batch_idx):
+        return self.general_step(batch, batch_idx, "pred")
 
     def configure_optimizers(self):
         parameters_optim = []
@@ -182,8 +185,16 @@ class PET_CNN_ResNet(pl.LightningModule):
                     'params': param,
                     'lr': self.hparams['lr_pretrained']})
 
-        return torch.optim.Adam(parameters_optim,
+        optimizer = torch.optim.Adam(parameters_optim,
                                 weight_decay=self.hparams['l2_reg'])
+        if self.hparams['reduce_factor_lr_schedule']:
+            scheduler = ReduceLROnPlateau(optimizer, factor=self.hparams['reduce_factor_lr_schedule'])
+            return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss_epoch"}
+        else:
+            return optimizer
+
+        
+        
 
     def training_epoch_end(self, training_step_outputs):
         avg_loss = torch.stack([x['loss']

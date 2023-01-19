@@ -11,6 +11,8 @@ import io
 import matplotlib.pyplot as plt
 from PIL import Image
 
+from pkg.loss_functions.focalloss import FocalLoss
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 class IntHandler:
     """
@@ -26,7 +28,7 @@ class IntHandler:
 
 class Small_PET_CNN(pl.LightningModule):
 
-    def __init__(self, hparams):
+    def __init__(self, hparams, gpu_id=None):
         super().__init__()
         self.save_hyperparameters(hparams)
         if hparams["n_classes"] == 3:
@@ -62,9 +64,16 @@ class Small_PET_CNN(pl.LightningModule):
                 modules.append(
                     nn.Dropout(p=self.hparams["dropout_dense_p"]))
             modules.append(nn.Linear(n_in, n_out))
+            modules.append(nn.ReLU())
         modules.append(nn.Linear(n_out, self.hparams["n_classes"]))
 
         self.model = nn.Sequential(*modules)
+
+        if 'fl_gamma' in hparams and hparams['fl_gamma']:
+            self.criterion = FocalLoss(gamma=self.hparams['fl_gamma'])
+        else:
+            self.criterion = nn.CrossEntropyLoss(
+                weight=hparams['loss_class_weights'])
 
         self.criterion = nn.CrossEntropyLoss(
             weight=hparams['loss_class_weights'])
@@ -111,8 +120,10 @@ class Small_PET_CNN(pl.LightningModule):
         x = x.unsqueeze(1)
         x = x.to(dtype=torch.float32)
         y_hat = self.forward(x).to(dtype=torch.double)
+
         loss = self.criterion(y_hat, y)
-        self.log(mode + '_loss', loss, on_step=True)
+        if mode != 'pred':
+            self.log(mode + '_loss', loss, on_step=True)
         if mode == 'val':
             self.f1_score_val(y_hat, y)
             self.f1_score_val_per_class(y_hat, y)
@@ -127,8 +138,17 @@ class Small_PET_CNN(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         return self.general_step(batch, batch_idx, "val")
 
+    def predict_step(self, batch, batch_idx):
+        return self.general_step(batch, batch_idx, "pred")
+
     def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters(), lr=self.hparams['lr'])
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hparams['lr'])
+        if self.hparams['reduce_factor_lr_schedule']:
+            scheduler = ReduceLROnPlateau(optimizer, factor=self.hparams['reduce_factor_lr_schedule'])
+            return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss_epoch"}
+            #return [optimizer], [scheduler]
+        else:
+            return optimizer
 
     def training_epoch_end(self, training_step_outputs):
         avg_loss = torch.stack([x['loss']
@@ -159,6 +179,7 @@ class Small_PET_CNN(pl.LightningModule):
         self.f1_score_val.reset()
         self.f1_score_val_per_class.reset()
 
+        # current_lr = optimizer.param_groups[0]['lr']
         log_dict = {
             'val_loss_epoch': avg_loss,
             'val_f1_epoch': f1_epoch,

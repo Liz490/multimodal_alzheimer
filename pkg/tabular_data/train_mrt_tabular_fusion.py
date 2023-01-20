@@ -13,7 +13,7 @@ from pkg.train_pet_cnn import ValidationLossTracker
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'optuna_tabular_mri_fusion_two_class'
+EXPERIMENT_NAME = 'tabular_mri_fusion_two_class'
 EXPERIMENT_VERSION = None
 
 # MRI model
@@ -63,7 +63,8 @@ def optuna_objective(trial):
         'path_mri': PATH_MRI_CNN,
         'n_classes': 2,
         'gpu_id': 2,
-        'reduce_factor_lr_schedule': None
+        'reduce_factor_lr_schedule': None,
+        'ensemble_size': 4
     }
 
     # Define hyperparameter options and ranges
@@ -197,10 +198,11 @@ def optuna_optimization():
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    # optuna_optimization()
+    optuna_optimization()
     #####################
 
     # fine-tune best run (version 56)
+    """
     hparams = {
         'early_stopping_patience': 30,
         'max_epochs': 300,
@@ -222,3 +224,4 @@ if __name__ == '__main__':
                    model_mri=MODEL_MRI,
                    experiment_name='best_runs',
                    experiment_version='2stage_tabular_mri_2_class')
+    """

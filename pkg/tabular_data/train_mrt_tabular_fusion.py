@@ -16,9 +16,8 @@ LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'optuna_tabular_mri_fusion_two_class'
 EXPERIMENT_VERSION = None
 
-# Tabular and MRI models
-BASEPATH = os.getcwd()
-PATH_TABULAR = os.path.join(BASEPATH, 'lightning_logs/best_runs/tabular_2_class/checkpoints/epoch=112-step=112.ckpt')
+# MRI model
+BASEPATH = "/u/home/eisln/adlm_adni"
 PATH_MRI_CNN = os.path.join(BASEPATH, 'lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt')
 
 MODEL_MRI = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN)
@@ -61,7 +60,6 @@ def optuna_objective(trial):
     hparams = {
         'early_stopping_patience': 5,
         'max_epochs': 20,
-        'path_tabular': PATH_TABULAR,
         'path_mri': PATH_MRI_CNN,
         'n_classes': 2,
         'gpu_id': 2,
@@ -214,19 +212,9 @@ if __name__ == '__main__':
         'lr': 0.0008678312514285887,
         'batch_size': 32,
         'fl_gamma': 5,
-        # 'conv_out': [],
-        # 'filter_size': [5, 5],
-        # 'lr_pretrained': 1e-5,
-        # 'batchnorm_begin': True,
-        # 'batchnorm_conv': True,
-        # 'batchnorm_dense': True,
+        'ensemble_size': 4,
         'l2_reg': 0,
-        # 'linear_out': [256, 256, 256],
-        # 'linear_out': [],
-        # 'norm_percentile': 0.99,
-        # 'resnet_depth': 18,
-        'path_mri': '/u/home/schmiere/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
-        'path_tabular': '/u/home/schmiere/adlm_adni/lightning_logs/best_runs/tabular_2_class/checkpoints/epoch=112-step=112.ckpt',
+        'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
         'reduce_factor_lr_schedule': 0.1
     }
 

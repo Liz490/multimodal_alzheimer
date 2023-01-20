@@ -24,6 +24,7 @@ def get_data(path, binary_classification):
     """
     set = MultiModalDataset(path=path,
                                binary_classification=binary_classification,modalities=['tabular'])
+    print(path)
     loader = DataLoader(
         set,
         batch_size=len(set),

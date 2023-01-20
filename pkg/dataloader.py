@@ -439,6 +439,9 @@ if __name__ == "__main__":
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
+    #trainpath= "/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/data/train_path_data_labels.csv"
+    #valpath = "/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/data/val_path_data_labels.csv"
+
     # how to use for PET
     normalization_pet = {'mean': 0.5145, 'std': 0.5383}
     trainset_pet = MultiModalDataset(path=trainpath, modalities=['pet1451'], normalize_pet=normalization_pet)
@@ -446,11 +449,14 @@ if __name__ == "__main__":
     print(data_label_pet['pet1451'].shape)
     print(data_label_pet['label'])
 
+    #
+
     # how to use for MRI
     normalization_mri = {'per_scan_norm': 'min_max'}
-    trainset_mri = MultiModalDataset(path=trainpath, modalities=['t1w'], normalize_mri=normalization_mri, quantile=0.97)
+    trainset_mri = MultiModalDataset(path=trainpath, modalities=['t1w', 'tabular'], normalize_mri=normalization_mri, quantile=0.97)
     data_label_mri = trainset_mri[0]
     print(data_label_mri['mri'].shape)
+    print(data_label_mri['tabular'].shape)
     print(data_label_mri['label'])
 
     # how to use for tabular

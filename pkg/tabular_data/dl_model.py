@@ -38,16 +38,16 @@ class Tabular_MRT_Model(pl.LightningModule):
             self.label_ind_by_names = {'CN': 0, 'AD': 1}
 
         self.model_mri = Anat_CNN.load_from_checkpoint(hparams["path_mri"])
-        self.model_tabular = load_model(TRAINPATH, hparams["n_classes"]==2)
+        self.model_mri.model.conv_seg = self.model_mri.model.conv_seg[:2]
+
+        # Load models and save training sample size
+        self.model_tabular, self.tabular_training_size = load_model(TRAINPATH, hparams["n_classes"]==2, ensemble_size=hparams["ensemble_size"])
 
         # Freeze weights
         for name, param in self.model_mri.named_parameters():
             param.requires_grad = False
-        for param in self.model_tabular.model.parameters():
+        for param in self.model_tabular.model[2].parameters():
             param.requires_Grad = False
-
-        # Reduce output of tabular model
-        self.reduce_tab = nn.Sequential(nn.Linear(1024, 512), self.relu)
 
         # linear layers after concatenation
         self.stage2out = nn.Linear(512 + 512, 64)
@@ -55,6 +55,9 @@ class Tabular_MRT_Model(pl.LightningModule):
 
         # non-linearities
         self.relu = nn.ReLU()
+
+        # Reduce output of tabular model
+        self.reduce_tab = nn.Sequential(nn.Linear(1024, 512), self.relu)
 
         self.model_fuse = nn.Sequential(self.stage2out, self.relu, self.cls2)
 
@@ -75,23 +78,26 @@ class Tabular_MRT_Model(pl.LightningModule):
         Inputs:
         - x: PyTorch input Variable
         """
+        # Forward hook that saves activations at sepcified output layer
         activations = {}
         def get_activations(name):
             def hook(model, input, output):
                 activations[name] = output.detach()
-                handle.remove()
             return hook
 
+        # Register forward hook
         handle = self.model_tabular.model[2].decoder[0].register_forward_hook(get_activations('dec'))
+        x_tabular = x_tabular.cpu().squeeze()
 
+        # Forward step for tabular data
         self.model_tabular.predict_proba(x_tabular, normalize_with_test=False)
-        activations = activations['dec']
-        activations = get_avg_activation(activations)
+
+        # Retrieve activations to use as output for further progressing
+        activations = get_avg_activation(activations['dec'], num_ensemble=self.hparams['ensemble_size'] , training_size=self.tabular_training_size)
+        handle.remove()
 
         out_tabular = self.reduce_tab(activations)
-
-        out_mri = self.model_mri(x_mri)
-
+        out_mri = self.model_mri(x_mri).squeeze()
         out = torch.cat((out_tabular, out_mri), dim=1)
         out = self.model_fuse(out)
         return out
@@ -195,12 +201,13 @@ class Tabular_MRT_Model(pl.LightningModule):
         """
         See https://stackoverflow.com/a/73388839
         """
-
         outputs = torch.cat([tmp['outputs'] for tmp in outs])
         labels = torch.cat([tmp['labels'] for tmp in outs])
 
-        confusion = torchmetrics.ConfusionMatrix(
+        task = "binary" if self.hparams['n_classes'] == 2 else "multiclass"
+        confusion = torchmetrics.ConfusionMatrix(task=task,
             num_classes=self.hparams["n_classes"]).to(outputs.get_device())
+        outputs = torch.max(outputs,dim=1)[1]
         confusion(outputs, labels)
         computed_confusion = confusion.compute().detach().cpu().numpy().astype(int)
 
@@ -230,14 +237,3 @@ class Tabular_MRT_Model(pl.LightningModule):
         buf.seek(0)
         with Image.open(buf) as im:
             return torchvision.transforms.ToTensor()(im)
-
-
-X_val, Y_val = data_preparation.get_data(True, True)
-STORAGE_PATH = '/vol/chameleon/projects/adni/adni_1/trained_models/tabular_baseline.pth'
-
-output = classifier.predict_proba(X_val, normalize_with_test=False)
-
-
-
-
-

@@ -16,8 +16,9 @@ from MedicalNet.models import resnet
 from MedicalNet.model import generate_model
 from MedicalNet.setting import parse_opts
 import sys
+import os
 
-from focalloss import FocalLoss
+from pkg.focalloss import FocalLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 class IntHandler:
@@ -45,10 +46,11 @@ class Anat_CNN(pl.LightningModule):
         # Initialize Model
         opts = parse_opts()
         opts.pretrain_path = f'/vol/chameleon/projects/adni/adni_1/MedicalNet/pretrain/resnet_{hparams["resnet_depth"]}_23dataset.pth'
+        gpu_id = os.getenv('CUDA_VISIBLE_DEVICES')
         if gpu_id:
-            opts.gpu_id = [str(gpu_id)]
+            opts.gpu_id = gpu_id
         else:
-            opts.gpu_id = [hparams["gpu_id"]]
+            raise ValueError("CUDA_VISIBLE_DEVICES is not set!")
         opts.input_W = 91
         opts.input_H = 91
         opts.input_D = 109

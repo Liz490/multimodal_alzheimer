@@ -213,7 +213,6 @@ class Anat_PET_CNN(pl.LightningModule):
 
         outputs = torch.cat([tmp['outputs'] for tmp in outs])
         labels = torch.cat([tmp['labels'] for tmp in outs])
-
         confusion = torchmetrics.ConfusionMatrix(
             num_classes=self.hparams["n_classes"]).to(outputs.get_device())
         confusion(outputs, labels)

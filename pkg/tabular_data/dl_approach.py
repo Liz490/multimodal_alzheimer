@@ -13,7 +13,7 @@ import torch
 from pkg.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
 
-def train_and_predict(val_path, train_path, storage_path, binary_classification):
+def train_and_predict(val_path, train_path, storage_path, binary_classification, ensemble_size = 4):
     """Trains the TabPFN classifier for tabular data
             Args:
                 val_data_path: path to file containins validation data
@@ -22,7 +22,7 @@ def train_and_predict(val_path, train_path, storage_path, binary_classification)
 
     x_train, y_train = get_data(train_path, binary_classification=binary_classification)
     print(f'shape input data: {x_train.shape}')
-    classifier = train(x_train, y_train)
+    classifier = train(x_train, y_train, ensemble_size= ensemble_size)
 
     x_val, y_val = get_data(val_path, binary_classification=binary_classification)
     y_eval, p_eval = classifier.predict(x_val, return_winning_probability=True)
@@ -46,11 +46,11 @@ def train_and_predict(val_path, train_path, storage_path, binary_classification)
     torch.save({'model_state_dict': classifier.model[2].state_dict(), 'tabular_baseline_F1':f1_score_train}, storage_path)
     return classifier
 
-def train(x_train, y_train):
+def train(x_train, y_train, ensemble_size):
 
     # N_ensemble_configurations defines how many estimators are averaged, it is bounded by #features * #classes,
     # more ensemble members are slower, but more accurate
-    classifier = tabpfn.TabPFNClassifier(device='cuda', N_ensemble_configurations=6)
+    classifier = tabpfn.TabPFNClassifier(device='cuda', N_ensemble_configurations=ensemble_size)
     classifier.fit(x_train, y_train, overwrite_warning=True)
 
     return classifier
@@ -64,25 +64,26 @@ def predict_batch(batch, classifier):
     return pred, logits
 
 
-def load_model(path, binary_classification = True):
+def load_model(path, binary_classification = True, ensemble_size = 4):
     """
     loads model from directory
         Args:
             path: path to location where model is stored
         Returns:
             TabPFNlassifier with stored weights
+            shape of data it was trained with
     """
     x_train, y_train = get_data(path, binary_classification=binary_classification)
-    classifier = train(x_train, y_train)
-    return classifier
+    classifier = train(x_train, y_train, ensemble_size)
+    return classifier, x_train.shape[0]
 
 
-def get_avg_activation(activations):
+def get_avg_activation(activations, num_ensemble, training_size):
     output = None
-    for i in range(4):
-        activ_ = activations[:, i:i + 1, :]
+    for i in range(num_ensemble):
+        activ_ = activations[training_size:, i:i + 1, :]
         output = activ_ if output is None else output + activ_
-    output = output / 4
+    output = output / num_ensemble
     output = torch.transpose(output, 0, 1).squeeze()
     return output
 
@@ -93,7 +94,7 @@ if __name__ == '__main__':
     # Example usage how to extract probabilities of TabPFN
     # load classifier
     #classifier = load_model(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True)
-    classifier = train_and_predict(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True)
+    classifier = train_and_predict(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True, 4)
 
     X_val, Y_val = get_data(VAL_PATH, True)
     X_train, Y_train = get_data(TRAIN_PATH, True)
@@ -105,24 +106,26 @@ if __name__ == '__main__':
             handle.remove()
         return hook
 
-    def get_avg_activation(activations):
-        # print(activations)
-        # activations = torch.cat(activations, 1)
-        output = None
-        for i in range(4):
-            activ_ = activations[:, i:i + 1, :]
-            output = activ_ if output is None else output + activ_
-        output = output / 4
-        output = torch.transpose(output, 0, 1).squeeze()
-        return output
+
 
     handle = classifier.model[2].decoder[0].register_forward_hook(get_features('dec'))
-
+    print(f'activations before forward step: {features}')
+    print(f'shape of dl_appr train data: {X_train.shape}')
+    print(f'shape of dl_appr data: {X_val.shape}')
     output = classifier.predict_proba(X_val, normalize_with_test=False)
+
     name = "dec"
-    print(f'these are the format fetures asdflkajsöldfjkasdölfj: {features[name].shape}')
-    activations = features[name]
-    activations = get_avg_activation(activations)
-    print(activations.shape)
-    print(X_train.shape)
+    shape = features['dec'].shape
+    print(f'activations after forward step: {shape}')
+    handle.remove()
+    handle = classifier.model[2].decoder[0].register_forward_hook(get_features('dec'))
+    output = classifier.predict_proba(X_val, normalize_with_test=False)
+    shape = features['dec'].shape
+    features = features['dec']
+    activations = get_avg_activation(features, 4, 2158)
+    print(f'activations after third forward step: {shape}')
+    print(f'final extracted activations: {activations.shape}')
+
+
+
 

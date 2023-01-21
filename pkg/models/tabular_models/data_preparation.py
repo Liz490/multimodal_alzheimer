@@ -31,29 +31,5 @@ def get_data(path, binary_classification):
         shuffle=True,
         num_workers=32
     )
-
     batch = next(iter(loader))
     return batch['tabular'], batch['label']
-
-def encode_labels(labels):
-    """Encodes labels (MCI, AD, CN) numerically
-        Args:
-            labels: labels to be encoded
-    """
-    lab_enc = LabelEncoder()
-    lab_enc.fit(labels)
-    encoded = lab_enc.transform(labels)
-    return encoded
-
-if __name__ == "__main__":
-    PATH = '../../Adni_merged.csv'
-    cols = ['EXAMDATE', 'Ventricles', 'Hippocampus', 'WholeBrain',
-            'Entorhinal', 'Fusiform', 'MidTemp', 'ICV', 'AGE',
-            'DX']
-
-    MCI = False
-    EXTRACT_MCI = False
-    normalise = ['Ventricles', 'Hippocampus', 'WholeBrain', 'Entorhinal', 'Fusiform', 'MidTemp']
-    ADNI_PATH = '../../Adni_merged.csv'
-    # extractMCI_val(DSPLIT_PATH, columns, normalise)
-    print('CSV files for each set was created!')

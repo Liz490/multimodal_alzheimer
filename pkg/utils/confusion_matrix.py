@@ -49,4 +49,3 @@ def confusion_matrix(outputs: torch.Tensor,
     TODO move it here
     """
     pass
-

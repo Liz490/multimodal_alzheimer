@@ -5,15 +5,14 @@ https://arxiv.org/abs/2207.01848
 """
 
 import matplotlib.pyplot as plt
-import numpy as np
 from sklearn import metrics
 import tabpfn
-from tabular_models import data_preparation
+from pkg.models.tabular_models.data_preparation import *
 import torch
 from pkg.utils.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
 
-def train_and_predict(val_path, train_path, storage_path, binary_classification):
+def train_and_predict(val_path, train_path, storage_path, binary_classification, ensemble_size = 4):
     """Trains the TabPFN classifier for tabular data
             Args:
                 val_data_path: path to file containins validation data
@@ -93,16 +92,6 @@ if __name__ == '__main__':
     # load classifier
     #classifier = load_model(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True)
     classifier = train_and_predict(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True, 4)
-
-    X_val, Y_val = get_data(VAL_PATH, True)
-    X_train, Y_train = get_data(TRAIN_PATH, True)
-
-    features = {}
-    def get_features(name):
-        def hook(model, input, output):
-            features[name] = output.detach()
-            handle.remove()
-        return hook
 
 
 

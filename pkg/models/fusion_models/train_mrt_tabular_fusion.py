@@ -1,16 +1,16 @@
 import os
 import torch
-from pkg.dataloader import MultiModalDataset
+from pkg.utils.dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
-from pkg.anat_cnn import Anat_CNN
+from pkg.models.mri_models.anat_cnn import Anat_CNN
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import math
 
-from pkg.tabular_data.dl_model import Tabular_MRT_Model
-from pkg.train_pet_cnn import ValidationLossTracker
-from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
+from pkg.models.fusion_models.tabular_mri_fusion import Tabular_MRT_Model
+from pkg.models.pet_models.train_pet_cnn import ValidationLossTracker
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
 LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'tabular_mri_fusion_two_class'
@@ -198,11 +198,11 @@ def optuna_optimization():
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    optuna_optimization()
+    #optuna_optimization()
     #####################
 
     # fine-tune best run (version 56)
-    """
+
     hparams = {
         'early_stopping_patience': 30,
         'max_epochs': 300,
@@ -224,4 +224,4 @@ if __name__ == '__main__':
                    model_mri=MODEL_MRI,
                    experiment_name='best_runs',
                    experiment_version='2stage_tabular_mri_2_class')
-    """
+

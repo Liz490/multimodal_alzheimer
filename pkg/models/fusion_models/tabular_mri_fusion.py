@@ -1,19 +1,17 @@
-import data_preparation
-import numpy as np
 import pytorch_lightning as pl
-from dl_approach import *
-from pkg.anat_cnn import Anat_CNN
-import torch.nn as nn
-from pkg.focalloss import FocalLoss
-from torchmetrics.classification import MulticlassF1Score
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-import seaborn as sns
-import pandas as pd
-import io
-import matplotlib.pyplot as plt
-from PIL import Image
 import torchmetrics
 import torchvision
+
+from pkg.models.tabular_models.dl_approach import *
+import seaborn as sns
+import pandas as pd
+from pkg.models.mri_models.anat_cnn import Anat_CNN
+import torch.nn as nn
+from pkg.loss_functions.focalloss import FocalLoss
+from torchmetrics.classification import MulticlassF1Score
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+import io
+from PIL import Image
 
 TRAIN_PATH ='/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
 

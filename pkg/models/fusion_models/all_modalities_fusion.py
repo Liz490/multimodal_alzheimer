@@ -22,11 +22,13 @@ class All_Modalities_Fusion(pl.LightningModule):
             self.label_ind_by_names = {'CN': 0, 'AD': 1}
 
         # load checkpoints
-        self.model_anat_pet = Anat_PET_CNN.load_from_checkpoint(hparams["path_anat_pet"])
+        self.model_anat_pet = Anat_PET_CNN.load_from_checkpoint(
+            hparams["path_anat_pet"])
         self.model_anat_tab = Tabular_MRI_CNN.load_from_checkpoint(
             hparams["path_anat_tab"])
-        # TODO self.model_pet_tab = Tabular_PET_CNN.load_from_checkpoint(hparams["path_pet_tab"])
-        
+        # TODO self.model_pet_tab = Tabular_PET_CNN.load_from_checkpoint(
+        # hparams["path_pet_tab"])
+
         # cut of the classifiers from the second stage models
         self.model_anat_pet.model_fuse = self.model_anat_pet.model_fuse[:-2]
         self.model_anat_tab.model_fuse = self.model_anat_tab.model_fuse[:-2]
@@ -58,8 +60,10 @@ class All_Modalities_Fusion(pl.LightningModule):
             self.criterion = nn.CrossEntropyLoss(
                 weight=hparams['loss_class_weights'])
 
-        self.f1_score_train = MulticlassF1Score(num_classes=hparams["n_classes"], average='macro')
-        self.f1_score_val = MulticlassF1Score(num_classes=hparams["n_classes"], average='macro')
+        self.f1_score_train = MulticlassF1Score(
+            num_classes=hparams["n_classes"], average='macro')
+        self.f1_score_val = MulticlassF1Score(
+            num_classes=hparams["n_classes"], average='macro')
 
     def forward(self, x_pet, x_mri, x_tab):
         """

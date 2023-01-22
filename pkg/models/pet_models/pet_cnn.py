@@ -2,28 +2,11 @@ import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 from torchmetrics.classification import MulticlassF1Score
-import torchvision
-import torchmetrics
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-import io
-import matplotlib.pyplot as plt
-from PIL import Image
 
 from pkg.loss_functions.focalloss import FocalLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-class IntHandler:
-    """
-    See https://stackoverflow.com/a/73388839
-    """
-
-    def legend_artist(self, legend, orig_handle, fontsize, handlebox):
-        x0, y0 = handlebox.xdescent, handlebox.ydescent
-        text = plt.matplotlib.text.Text(x0, y0, str(orig_handle))
-        handlebox.add_artist(text)
-        return text
+from pkg.utils.confusion_matrix import generate_loggable_confusion_matrix
 
 
 class Small_PET_CNN(pl.LightningModule):
@@ -142,11 +125,14 @@ class Small_PET_CNN(pl.LightningModule):
         return self.general_step(batch, batch_idx, "pred")
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hparams['lr'])
+        optimizer = torch.optim.Adam(self.model.parameters(),
+                                     lr=self.hparams['lr'])
         if self.hparams['reduce_factor_lr_schedule']:
-            scheduler = ReduceLROnPlateau(optimizer, factor=self.hparams['reduce_factor_lr_schedule'])
-            return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss_epoch"}
-            #return [optimizer], [scheduler]
+            scheduler = ReduceLROnPlateau(
+                optimizer, factor=self.hparams['reduce_factor_lr_schedule'])
+            return {"optimizer": optimizer,
+                    "lr_scheduler": scheduler,
+                    "monitor": "val_loss_epoch"}
         else:
             return optimizer
 
@@ -167,7 +153,8 @@ class Small_PET_CNN(pl.LightningModule):
             log_dict[f"train_f1_epoch_class_{i}"] = f1_epoch_per_class[i]
         self.log_dict(log_dict)
 
-        im = self.generate_confusion_matrix(training_step_outputs)
+        im = generate_loggable_confusion_matrix(training_step_outputs,
+                                                self.label_ind_by_names)
         self.logger.experiment.add_image(
             "train_confusion_matrix", im, global_step=self.current_epoch)
 
@@ -189,49 +176,10 @@ class Small_PET_CNN(pl.LightningModule):
             log_dict[f"val_f1_epoch_class_{i}"] = f1_epoch_per_class[i]
         self.log_dict(log_dict)
 
-        im = self.generate_confusion_matrix(validation_step_outputs)
+        im = generate_loggable_confusion_matrix(validation_step_outputs,
+                                                self.label_ind_by_names)
         self.logger.experiment.add_image(
             "val_confusion_matrix", im, global_step=self.current_epoch)
-
-    def generate_confusion_matrix(self, outs):
-        """
-        See https://stackoverflow.com/a/73388839
-        """
-
-        outputs = torch.cat([tmp['outputs'] for tmp in outs])
-        labels = torch.cat([tmp['labels'] for tmp in outs])
-
-        confusion = torchmetrics.ConfusionMatrix(
-            num_classes=self.hparams["n_classes"]).to(outputs.get_device())
-        confusion(outputs, labels)
-        computed_confusion = confusion.compute().detach().cpu().numpy().astype(int)
-
-        # confusion matrix
-        df_cm = pd.DataFrame(
-            computed_confusion,
-            index=self.label_ind_by_names.values(),
-            columns=self.label_ind_by_names.values(),
-        )
-
-        fig, ax = plt.subplots(figsize=(10, 5))
-        fig.subplots_adjust(left=0.05, right=.65)
-        sns.set(font_scale=1.2)
-        sns.heatmap(df_cm, annot=True, annot_kws={
-                    "size": 16}, fmt='d', ax=ax, cmap='crest')
-        ax.legend(
-            self.label_ind_by_names.values(),
-            self.label_ind_by_names.keys(),
-            handler_map={int: IntHandler()},
-            loc='upper left',
-            bbox_to_anchor=(1.2, 1)
-        )
-        buf = io.BytesIO()
-
-        plt.savefig(buf, format='jpeg', bbox_inches='tight')
-        plt.close('all')
-        buf.seek(0)
-        with Image.open(buf) as im:
-            return torchvision.transforms.ToTensor()(im)
 
 
 class Random_Benchmark_All_CN(Small_PET_CNN):

@@ -353,6 +353,8 @@ if __name__ == "__main__":
     out = majority_voting(modalities=modalities,
                                     binary_classification=True)
                                 
+    # TODO use confusion matrix function from pkg.utils, for that we need to 
+    # send out to a device or check in the function whether a device is present
     fig_uw = confusion_matrix(outputs=out['logits_unweighted'], 
                         labels=out['targets'], 
                         binary_classification=True)

@@ -1,30 +1,15 @@
 import pytorch_lightning as pl
-import torchmetrics
-import torchvision
 
 from pkg.models.tabular_models.dl_approach import *
-import seaborn as sns
-import pandas as pd
 from pkg.models.mri_models.anat_cnn import Anat_CNN
 import torch.nn as nn
 from pkg.loss_functions.focalloss import FocalLoss
 from torchmetrics.classification import MulticlassF1Score
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-import io
-from PIL import Image
+from pkg.utils.confusion_matrix import generate_loggable_confusion_matrix
 
 TRAIN_PATH ='/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
 
-class IntHandler:
-    """
-    See https://stackoverflow.com/a/73388839
-    """
-
-    def legend_artist(self, legend, orig_handle, fontsize, handlebox):
-        x0, y0 = handlebox.xdescent, handlebox.ydescent
-        text = plt.matplotlib.text.Text(x0, y0, str(orig_handle))
-        handlebox.add_artist(text)
-        return text
 
 class Tabular_MRT_Model(pl.LightningModule):
     def __init__(self, hparams):
@@ -175,10 +160,10 @@ class Tabular_MRT_Model(pl.LightningModule):
             'train_f1_epoch': f1_epoch,
             'step': float(self.current_epoch)
         })
-
-        im_train = self.generate_confusion_matrix(training_step_outputs)
+        im = generate_loggable_confusion_matrix(training_step_outputs,
+                                                self.label_ind_by_names)
         self.logger.experiment.add_image(
-            "train_confusion_matrix", im_train, global_step=self.current_epoch)
+            "train_confusion_matrix", im, global_step=self.current_epoch)
 
     def validation_epoch_end(self, validation_step_outputs):
         avg_loss = torch.stack([x['loss']
@@ -191,47 +176,7 @@ class Tabular_MRT_Model(pl.LightningModule):
             'val_f1_epoch': f1_epoch,
             'step': float(self.current_epoch)
         })
-        im_val = self.generate_confusion_matrix(validation_step_outputs)
+        im = generate_loggable_confusion_matrix(validation_step_outputs,
+                                                self.label_ind_by_names)
         self.logger.experiment.add_image(
-            "val_confusion_matrix", im_val, global_step=self.current_epoch)
-
-    def generate_confusion_matrix(self, outs):
-        """
-        See https://stackoverflow.com/a/73388839
-        """
-        outputs = torch.cat([tmp['outputs'] for tmp in outs])
-        labels = torch.cat([tmp['labels'] for tmp in outs])
-
-        task = "binary" if self.hparams['n_classes'] == 2 else "multiclass"
-        confusion = torchmetrics.ConfusionMatrix(task=task,
-            num_classes=self.hparams["n_classes"]).to(outputs.get_device())
-        outputs = torch.max(outputs,dim=1)[1]
-        confusion(outputs, labels)
-        computed_confusion = confusion.compute().detach().cpu().numpy().astype(int)
-
-        # confusion matrix
-        df_cm = pd.DataFrame(
-            computed_confusion,
-            index=self.label_ind_by_names.values(),
-            columns=self.label_ind_by_names.values(),
-        )
-
-        fig, ax = plt.subplots(figsize=(10, 5))
-        fig.subplots_adjust(left=0.05, right=.65)
-        sns.set(font_scale=1.2)
-        sns.heatmap(df_cm, annot=True, annot_kws={
-            "size": 16}, fmt='d', ax=ax, cmap='crest')
-        ax.legend(
-            self.label_ind_by_names.values(),
-            self.label_ind_by_names.keys(),
-            handler_map={int: IntHandler()},
-            loc='upper left',
-            bbox_to_anchor=(1.2, 1)
-        )
-        buf = io.BytesIO()
-
-        plt.savefig(buf, format='jpeg', bbox_inches='tight')
-        plt.close('all')
-        buf.seek(0)
-        with Image.open(buf) as im:
-            return torchvision.transforms.ToTensor()(im)
+            "val_confusion_matrix", im, global_step=self.current_epoch)

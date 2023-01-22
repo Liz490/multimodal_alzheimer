@@ -1,9 +1,13 @@
 import torch
+import torchmetrics
 import torchvision
 import matplotlib.pyplot as plt
 import io
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 from PIL import Image
+import seaborn as sns
+import pandas as pd
 
 
 class IntHandler:
@@ -18,7 +22,9 @@ class IntHandler:
         return text
 
 
-def generate_loggable_confusion_matrix(self, outs):
+def generate_loggable_confusion_matrix(
+        outs,
+        label_idx_by_name: dict['str', 'int']):
     """
     See https://stackoverflow.com/a/73388839
     """
@@ -26,10 +32,7 @@ def generate_loggable_confusion_matrix(self, outs):
     outputs = torch.cat([tmp['outputs'] for tmp in outs])
     labels = torch.cat([tmp['labels'] for tmp in outs])
 
-    fig = confusion_matrix(outputs,
-                           labels,
-                           self.hparams['n_classes'],
-                           self.self.label_ind_by_names)
+    fig = confusion_matrix(outputs, labels, label_idx_by_name)
 
     buf = io.BytesIO()
 
@@ -42,10 +45,35 @@ def generate_loggable_confusion_matrix(self, outs):
 
 def confusion_matrix(outputs: torch.Tensor,
                      labels: torch.Tensor,
-                     n_classes: int,
-                     label_idx_by_name: dict[str, int]) -> plt.figure.Figure:
+                     label_idx_by_name: dict[str, int]) -> Figure:
     """
     Implemented in majority voting.
-    TODO move it here
     """
-    pass
+    n_classes = len(label_idx_by_name)
+
+    confusion = torchmetrics.ConfusionMatrix(num_classes=n_classes).to(
+        outputs.get_device())
+    confusion(outputs, labels)
+    computed_confusion = confusion.compute().detach().cpu().numpy().astype(int)
+
+    # confusion matrix
+    df_cm = pd.DataFrame(
+        computed_confusion,
+        index=label_idx_by_name.values(),
+        columns=label_idx_by_name.values(),
+    )
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    fig.subplots_adjust(left=0.05, right=.65)
+    sns.set(font_scale=1.2)
+    sns.heatmap(df_cm, annot=True, annot_kws={
+                "size": 16}, fmt='d', ax=ax, cmap='crest')
+    ax.legend(
+        label_idx_by_name.values(),
+        label_idx_by_name.keys(),
+        handler_map={int: IntHandler()},
+        loc='upper left',
+        bbox_to_anchor=(1.2, 1)
+    )
+
+    return fig

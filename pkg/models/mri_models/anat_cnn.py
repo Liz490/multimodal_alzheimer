@@ -5,6 +5,7 @@ from torchmetrics.classification import MulticlassF1Score
 
 from MedicalNet.model import generate_model
 from MedicalNet.setting import parse_opts
+import sys
 import os
 
 from pkg.loss_functions.focalloss import FocalLoss

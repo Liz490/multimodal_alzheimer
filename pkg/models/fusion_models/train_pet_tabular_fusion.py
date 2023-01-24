@@ -14,7 +14,7 @@ from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelChec
 
 # tensorboard and checkpoint logging
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'optuna_pet_mri_fusion_two_class'
+EXPERIMENT_NAME = 'optuna_pet_tabular_fusion_two_class'
 EXPERIMENT_VERSION = None
 
 # PET and MRI models
@@ -146,14 +146,17 @@ def train_pet_tabular(hparams, model_pet, experiment_name='', experiment_version
         trainset,
         batch_size=hparams['batch_size'],
         shuffle=True,
-        num_workers=32
+        num_workers=32,
+        drop_last=True
     )
 
     valloader = DataLoader(
         valset,
         batch_size=hparams['batch_size'],
         shuffle=False,
-        num_workers=32)
+        num_workers=32,
+        drop_last=True
+    )
 
     # Get class distribution of the trainset for weighted loss
     _, weight_normalized = trainset.get_label_distribution()
@@ -202,29 +205,29 @@ def optuna_optimization():
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    # optuna_optimization()
+    optuna_optimization()
     #####################
 
     # fine-tune best run (version 56)
-    hparams = {
-        'early_stopping_patience': 30,
-        'max_epochs': 300,
-        'simple_dim_red': True,
-        'norm_mean_train': 413.6510,
-        'norm_std_train': 918.5371,
-        'norm_mean_val': 418.4120,
-        'norm_std_val': 830.2466,
-        'n_classes': 2,
-        'lr': 0.0008678312514285887,
-        'batch_size': 32,
-        'ensemble_size': 4,
-        'fl_gamma': 5,
-        'l2_reg': 0,
-        'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt',
-        'reduce_factor_lr_schedule': 0.1
-    }
-
-    train_pet_tabular(hparams,
-                   model_pet=MODEL_PET,
-                   experiment_name='train_runs',
-                   experiment_version='2stage_pet_tabular_2_class')
+    # hparams = {
+    #     'early_stopping_patience': 30,
+    #     'max_epochs': 300,
+    #     'simple_dim_red': True,
+    #     'norm_mean_train': 413.6510,
+    #     'norm_std_train': 918.5371,
+    #     'norm_mean_val': 418.4120,
+    #     'norm_std_val': 830.2466,
+    #     'n_classes': 2,
+    #     'lr': 0.0008678312514285887,
+    #     'batch_size': 32,
+    #     'ensemble_size': 4,
+    #     'fl_gamma': 5,
+    #     'l2_reg': 0,
+    #     'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt',
+    #     'reduce_factor_lr_schedule': 0.1
+    # }
+    #
+    # train_pet_tabular(hparams,
+    #                model_pet=MODEL_PET,
+    #                experiment_name='train_runs',
+    #                experiment_version='2stage_pet_tabular_2_class')

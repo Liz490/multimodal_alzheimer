@@ -145,7 +145,7 @@ class PET_TABULAR_CNN(pl.LightningModule):
         x_pet = x_pet.unsqueeze(1)
         x_pet = x_pet.to(dtype=torch.float32)
         # call the forward method
-        y_hat = self(x_pet, x_tabular).to(dtype=torch.double)
+        y_hat = self(x_pet, x_tabular.unsqueeze(1).to(dtype=torch.float32)).to(dtype=torch.double)
         loss = self.criterion(y_hat, y)
         self.log(mode + '_loss', loss, on_step=True, prog_bar=True)
         # compute F1

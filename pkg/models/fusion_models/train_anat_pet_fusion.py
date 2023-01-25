@@ -68,7 +68,8 @@ def optuna_objective(trial):
         'path_mri': PATH_MRI_CNN,
         'n_classes': 2,
         'gpu_id': 2,
-        'reduce_factor_lr_schedule': None
+        'reduce_factor_lr_schedule': None,
+        'best_k_checkpoints': 3
     }
 
     # Define hyperparameter options and ranges
@@ -189,7 +190,16 @@ def train_anat_pet(hparams, model_pet, model_mri, experiment_name='', experiment
             ),
             val_loss_tracker,
             lr_monitor,
-            ModelCheckpoint(monitor='val_loss_epoch')
+            ModelCheckpoint(monitor='val_loss_epoch',
+                            save_top_k=hparams['best_k_checkpoints'],
+                            mode='min',
+                            filename='epoch={epoch}-val_loss={val_loss_epoch:.3f}',
+                            auto_insert_metric_name=False),
+            ModelCheckpoint(monitor='val_f1_epoch',
+                        save_top_k=hparams['best_k_checkpoints'],
+                        mode='max',
+                        filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
+                        auto_insert_metric_name=False)
         ]
     )
 

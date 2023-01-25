@@ -81,7 +81,8 @@ def optuna_just_sampling(trial):
         'norm_mean': 0.5145,
         'norm_std': 0.5383,
         'reduce_factor_lr_schedule': None,
-        'n_classes': 2
+        'n_classes': 2,
+        'best_k_checkpoints': 3
     }
     hparams['lr'] = trial.suggest_float(
         'learning_rate', lr_min, lr_max, log=True)
@@ -207,7 +208,16 @@ def train(hparams,
                 patience=hparams['early_stopping_patience']),
             val_loss_tracker,
             lr_monitor,
-            ModelCheckpoint(monitor='val_loss_epoch')
+            ModelCheckpoint(monitor='val_loss_epoch',
+                            save_top_k=hparams['best_k_checkpoints'],
+                            mode='min',
+                            filename='epoch={epoch}-val_loss={val_loss_epoch:.3f}',
+                            auto_insert_metric_name=False),
+            ModelCheckpoint(monitor='val_f1_epoch',
+                        save_top_k=hparams['best_k_checkpoints'],
+                        mode='max',
+                        filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
+                        auto_insert_metric_name=False)
         ]
     )
     

@@ -64,7 +64,8 @@ def optuna_objective(trial):
         'n_classes': 2,
         'gpu_id': 2,
         'reduce_factor_lr_schedule': None,
-        'ensemble_size': 4
+        'ensemble_size': 4,
+        'best_k_checkpoints': 3
     }
 
     # Define hyperparameter options and ranges
@@ -178,7 +179,16 @@ def train_anat_tabular(hparams, model_mri, experiment_name='', experiment_versio
             ),
             val_loss_tracker,
             lr_monitor,
-            ModelCheckpoint(monitor='val_loss_epoch')
+            ModelCheckpoint(monitor='val_loss_epoch',
+                            save_top_k=hparams['best_k_checkpoints'],
+                            mode='min',
+                            filename='epoch={epoch}-val_loss={val_loss_epoch:.3f}',
+                            auto_insert_metric_name=False),
+            ModelCheckpoint(monitor='val_f1_epoch',
+                        save_top_k=hparams['best_k_checkpoints'],
+                        mode='max',
+                        filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
+                        auto_insert_metric_name=False)
         ]
     )
 

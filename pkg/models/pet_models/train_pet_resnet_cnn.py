@@ -6,6 +6,7 @@ from pet_resnet_cnn import PET_CNN_ResNet
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
 import math
 from train_pet_cnn import ValidationLossTracker
 
@@ -55,6 +56,7 @@ def optuna_objective(trial):
         'norm_std': 0.5383,
         'n_classes': 2,
         'gpu_id': 3,
+        'best_k_checkpoints': 3
     }
 
     def generate_linear_block_options(first_layer_options: list,
@@ -214,7 +216,17 @@ def train_pet_resnet(hparams, experiment_name='', experiment_version=None):
                 mode='min',
                 patience=hparams['early_stopping_patience']
             ),
-            val_loss_tracker
+            val_loss_tracker,
+            ModelCheckpoint(monitor='val_loss_epoch',
+                            save_top_k=hparams['best_k_checkpoints'],
+                            mode='min',
+                            filename='epoch={epoch}-val_loss={val_loss_epoch:.3f}',
+                            auto_insert_metric_name=False),
+            ModelCheckpoint(monitor='val_f1_epoch',
+                        save_top_k=hparams['best_k_checkpoints'],
+                        mode='max',
+                        filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
+                        auto_insert_metric_name=False)
         ]
     )
 

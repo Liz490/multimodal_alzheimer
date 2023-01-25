@@ -25,7 +25,11 @@ class Anat_PET_CNN(pl.LightningModule):
         self.model_mri = Anat_CNN.load_from_checkpoint(hparams["path_mri"])
         
         # cut the model after GAP + flatten
-        self.model_pet = self.model_pet.model[:-3]
+        # Note: architectures for 2-class and 3-class problem might deviate slightly
+        if hparams["n_classes"] == 2:
+            self.model_pet = self.model_pet.model[:-3]
+        else:
+            self.model_pet = self.model_pet.model[:-1]
         self.model_mri.model.conv_seg = self.model_mri.model.conv_seg[:2]
 
         # Freeze weights in the stage-1 models

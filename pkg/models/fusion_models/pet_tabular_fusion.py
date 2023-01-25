@@ -44,7 +44,11 @@ class PET_TABULAR_CNN(pl.LightningModule):
         self.model_pet = Small_PET_CNN.load_from_checkpoint(hparams["path_pet"])
 
         # cut the model after GAP + flatten
-        self.model_pet = self.model_pet.model[:-3]
+        # Note: architectures for 2-class and 3-class problem might deviate slightly
+        if hparams["n_classes"] == 2:
+            self.model_pet = self.model_pet.model[:-3]
+        else:
+            self.model_pet = self.model_pet.model[:-1]
 
         # Load models and save training sample size
         self.model_tabular, self.tabular_training_size = load_model(TRAINPATH, hparams["n_classes"] == 2,

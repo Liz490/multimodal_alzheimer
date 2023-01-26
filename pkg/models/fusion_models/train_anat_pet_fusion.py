@@ -15,16 +15,20 @@ from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelChec
 
 # tensorboard and checkpoint logging
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'optuna_pet_mri_fusion_two_class'
+EXPERIMENT_NAME = 'optuna_unfrozen_pet_mri_fusion_three_class'
 EXPERIMENT_VERSION = None
 
 # PET and MRI models
-BASEPATH = os.getcwd()
-PATH_PET_CNN = os.path.join(BASEPATH, 'lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt')
-PATH_MRI_CNN = os.path.join(BASEPATH, 'lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt')
+BASEPATH = '/u/home/eisln/adlm_adni'
+PATH_PET_CNN_2_CLASS = '/data2/practical-wise2223/adni/adni_1/lightning_checkpoints/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt'
+PATH_MRI_CNN_2_CLASS = '/data2/practical-wise2223/adni/adni_1/lightning_checkpoints/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt'
+PATH_PET_CNN_3_CLASS = os.path.join(BASEPATH, 'lightning_logs/pet_3_class_retrain_best/v204/checkpoints/epoch=28-step=28.ckpt')
+PATH_MRI_CNN_3_CLASS = os.path.join(BASEPATH, 'lightning_logs/optuna_mri_3_class/version_48/checkpoints/epoch=32-step=32.ckpt')
 # load checkpoints
-MODEL_PET = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN)
-MODEL_MRI = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN)
+MODEL_PET_2_CLASS = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN_2_CLASS)
+MODEL_MRI_2_CLASS = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN_2_CLASS)
+MODEL_PET_3_CLASS = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN_3_CLASS)
+MODEL_MRI_3_CLASS = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN_3_CLASS)
 
 
 def options_list_to_dict(options: list) -> tuple[list, dict]:
@@ -64,13 +68,18 @@ def optuna_objective(trial):
     hparams = {
         'early_stopping_patience': 5,
         'max_epochs': 20,
-        'path_pet': PATH_PET_CNN,
-        'path_mri': PATH_MRI_CNN,
         'n_classes': 3,
         'gpu_id': 2,
         'reduce_factor_lr_schedule': None,
         'best_k_checkpoints': 3
     }
+
+    if hparams['n_classes'] == 2:
+        hparams['path_pet'] = PATH_PET_CNN_2_CLASS
+        hparams['path_mri'] = PATH_MRI_CNN_2_CLASS
+    else:
+        hparams['path_pet'] = PATH_PET_CNN_3_CLASS
+        hparams['path_mri'] = PATH_MRI_CNN_3_CLASS
 
     # Define hyperparameter options and ranges
     batch_size_options = [8, 16, 32, 64]
@@ -106,8 +115,6 @@ def optuna_objective(trial):
     # Train network
     try:
         val_loss = train_anat_pet(hparams=hparams,
-                              model_pet=MODEL_PET,
-                              model_mri=MODEL_MRI,
                               experiment_name=EXPERIMENT_NAME,
                               experiment_version=EXPERIMENT_VERSION)
         return val_loss
@@ -116,7 +123,7 @@ def optuna_objective(trial):
         return math.inf
 
 
-def train_anat_pet(hparams, model_pet, model_mri, experiment_name='', experiment_version=None):
+def train_anat_pet(hparams, experiment_name='', experiment_version=None):
     """
     Train model for MRI data.
 
@@ -136,9 +143,13 @@ def train_anat_pet(hparams, model_pet, model_mri, experiment_name='', experiment
 
     assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
     if hparams['n_classes'] == 2:
-        binary_classification=True
+        binary_classification = True
+        model_pet = MODEL_PET_2_CLASS
+        model_mri = MODEL_MRI_2_CLASS
     else:
         binary_classification=False
+        model_pet = MODEL_PET_3_CLASS
+        model_mri = MODEL_MRI_3_CLASS
     
     
     # Setup datasets and dataloaders
@@ -229,10 +240,10 @@ def optuna_optimization():
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    #optuna_optimization()
+    # optuna_optimization()
     #####################
 
-    # fine-tune best run (version 56)
+    # fine-tune best run 2 class (version 56)
     hparams = {
         'early_stopping_patience': 30,
         'max_epochs': 300,
@@ -245,13 +256,43 @@ if __name__ == '__main__':
         'batch_size': 32,
         'fl_gamma': 5,
         'l2_reg': 0,
-        'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
-        'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt',
-        'reduce_factor_lr_schedule': 0.1
+        # 'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
+        # 'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt',
+        'reduce_factor_lr_schedule': 0.1,
+        'lr_pretrained': None,
+        'best_k_checkpoints': 3
     }
 
+    # # fine-tune best run 3 class (version 26)
+    # hparams = {
+    #     'early_stopping_patience': 30,
+    #     'max_epochs': 300,
+    #     'norm_mean_train': 413.6510,
+    #     'norm_std_train': 918.5371,
+    #     'norm_mean_val': 418.4120,
+    #     'norm_std_val': 830.2466,
+    #     'n_classes': 3,
+    #     'lr': 2.56472539625866e-05,
+    #     'batch_size': 64,
+    #     'fl_gamma': 1,
+    #     'l2_reg': 0,
+    #     # 'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/optuna_mri_3_class/version_48/checkpoints/epoch=32-step=32.ckpt',
+    #     # 'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/pet_3_class_retrain_best/v204/checkpoints/epoch=28-step=28.ckpt',
+    #     'reduce_factor_lr_schedule': 0.1,
+    #     'norm_percentile': 0.95,
+    #     'lr_pretrained': None,
+    #     'best_k_checkpoints': 3
+    # }
+
+    if hparams['n_classes'] == 2:
+        hparams['path_pet'] = PATH_PET_CNN_2_CLASS
+        hparams['path_mri'] = PATH_MRI_CNN_2_CLASS
+    else:
+        hparams['path_pet'] = PATH_PET_CNN_3_CLASS
+        hparams['path_mri'] = PATH_MRI_CNN_3_CLASS
+
     train_anat_pet(hparams, 
-                model_pet=MODEL_PET,
-                model_mri=MODEL_MRI,
-                experiment_name='best_runs', 
-                experiment_version='2stage_pet_mri_2_class')
+                # model_pet=MODEL_PET,
+                # model_mri=MODEL_MRI,
+                experiment_name='testruns', #'best_pet_mri_3_class'
+                experiment_version='both_paths') # 2stage_pet_mri_2_class

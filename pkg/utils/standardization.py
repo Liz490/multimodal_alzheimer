@@ -1,17 +1,17 @@
-from dataloader import PETAV1451Dataset, AnatDataset
+from dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
 import os
 import torch
 
 transform = Compose([ToTensor()])
-path = os.path.join(os.getcwd(), 'data/path_data_petav1451.csv')
+path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
 #dataset = PETAV1451Dataset(path=path, transform=transform, balanced=False)  
 
-path_anat_train = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-path_anat_val = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
+# path_anat_train = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
+# path_anat_val = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 # MAKE SURE TO DISTINGUISH BETWEEN TRAIN, VAL AND TEST
-dataset = AnatDataset(path=path_anat_val, transform=None)
+trainset_mri = MultiModalDataset(path=path, modalities=['t1w'], normalize_mri=None, binary_classification=True)
 
 class NormalizeDataset():
     def __init__(self):
@@ -26,7 +26,8 @@ class NormalizeDataset():
         mean_x, mean_x_squared = 0, 0
         if dim==None:
             print("Statistics are computed over all dimensions")
-            for x,_ in loader:
+            for batch in loader:
+                x = batch['mri']
                 #print((x**2).shape)
                 # print(x)
                 # print(x.mean())
@@ -44,4 +45,4 @@ class NormalizeDataset():
 
         return mean, std
 
-print(NormalizeDataset.compute_std_mean(dataset))
+print(NormalizeDataset.compute_std_mean(trainset_mri))

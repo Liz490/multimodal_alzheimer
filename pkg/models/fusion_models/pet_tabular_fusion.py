@@ -55,10 +55,11 @@ class PET_TABULAR_CNN(pl.LightningModule):
                                                                     ensemble_size=hparams["ensemble_size"])
 
         # Freeze weights in the stage-1 models
-        for name, param in self.model_pet.named_parameters():
-            param.requires_grad = False
-        for param in self.model_tabular.model[2].parameters():
-            param.requires_Grad = False
+        if not self.hparams['lr_pretrained']:
+            for name, param in self.model_pet.named_parameters():
+                param.requires_grad = False
+            for param in self.model_tabular.model[2].parameters():
+                param.requires_Grad = False
 
 
         # linear layers after concatenation
@@ -167,7 +168,7 @@ class PET_TABULAR_CNN(pl.LightningModule):
 
     def configure_optimizers(self):
         parameters_optim = []
-        # we only want to optimize the parameters of the fusion model
+        # if we only want to optimize the parameters of the fusion model
         for name, param in self.model_fuse.named_parameters():
             parameters_optim.append({
                 'params': param,
@@ -176,6 +177,14 @@ class PET_TABULAR_CNN(pl.LightningModule):
             parameters_optim.append({
                 'params': param,
                 'lr': self.hparams['lr']})
+
+        # if we also want to train stage 1 with a smaller lr
+        if self.hparams['lr_pretrained']:
+            for name, param in self.model_pet.named_parameters():
+                parameters_optim.append({
+                'params': param,
+                'lr': self.hparams['lr_pretrained']})
+
         # pass parameters of fusion and reduce-dim network to optimizer
         optimizer = torch.optim.Adam(parameters_optim,
                                      weight_decay=self.hparams['l2_reg'])

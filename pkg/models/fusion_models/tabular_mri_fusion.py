@@ -27,10 +27,11 @@ class Tabular_MRT_Model(pl.LightningModule):
         self.model_tabular, self.tabular_training_size = load_model(TRAINPATH, hparams["n_classes"]==2, ensemble_size=hparams["ensemble_size"])
 
         # Freeze weights
-        for name, param in self.model_mri.named_parameters():
-            param.requires_grad = False
-        for param in self.model_tabular.model[2].parameters():
-            param.requires_Grad = False
+        if not self.hparams['lr_pretrained']:
+            for name, param in self.model_mri.named_parameters():
+                param.requires_grad = False
+            for param in self.model_tabular.model[2].parameters():
+                param.requires_Grad = False
 
         # linear layers after concatenation
         self.stage2out = nn.Linear(512 + 512, 64)
@@ -131,7 +132,7 @@ class Tabular_MRT_Model(pl.LightningModule):
 
     def configure_optimizers(self):
         parameters_optim = []
-        # we only want to optimize the parameters of the fusion model
+        # if we only want to optimize the parameters of the fusion model
         for name, param in self.model_fuse.named_parameters():
             parameters_optim.append({
                 'params': param,
@@ -140,7 +141,14 @@ class Tabular_MRT_Model(pl.LightningModule):
             parameters_optim.append({
                 'params': param,
                 'lr': self.hparams['lr']})
-        # TODO: set require_grad=False for everything else
+        
+        # if we also want to train stage 1 with a smaller lr
+        if self.hparams['lr_pretrained']:
+            for name, param in self.model_mri.named_parameters():
+                parameters_optim.append({
+                'params': param,
+                'lr': self.hparams['lr_pretrained']})
+                
         optimizer = torch.optim.Adam(parameters_optim,
                                 weight_decay=self.hparams['l2_reg'])
         if self.hparams['reduce_factor_lr_schedule']:

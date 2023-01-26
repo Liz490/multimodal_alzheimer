@@ -33,10 +33,11 @@ class Anat_PET_CNN(pl.LightningModule):
         self.model_mri.model.conv_seg = self.model_mri.model.conv_seg[:2]
 
         # Freeze weights in the stage-1 models
-        for name, param in self.model_pet.named_parameters():
-            param.requires_grad = False
-        for name, param in self.model_mri.named_parameters():
-            param.requires_grad = False
+        if not self.hparams['lr_pretrained']:
+            for name, param in self.model_pet.named_parameters():
+                param.requires_grad = False
+            for name, param in self.model_mri.named_parameters():
+                param.requires_grad = False
         
         
         # linear layers after concatenation
@@ -127,7 +128,7 @@ class Anat_PET_CNN(pl.LightningModule):
 
     def configure_optimizers(self):
         parameters_optim = []
-        # we only want to optimize the parameters of the fusion model
+        # if we only want to optimize the parameters of the fusion model
         for name, param in self.model_fuse.named_parameters():
             parameters_optim.append({
                 'params': param,
@@ -136,6 +137,17 @@ class Anat_PET_CNN(pl.LightningModule):
             parameters_optim.append({
                 'params': param,
                 'lr': self.hparams['lr']})
+        # if we also want to train stage 1 with a smaller lr
+        if self.hparams['lr_pretrained']:
+            for name, param in self.model_pet.named_parameters():
+                parameters_optim.append({
+                'params': param,
+                'lr': self.hparams['lr_pretrained']})
+            for name, param in self.model_mri.named_parameters():
+                parameters_optim.append({
+                'params': param,
+                'lr': self.hparams['lr_pretrained']})
+        
         # pass parameters of fusion and reduce-dim network to optimizer
         optimizer = torch.optim.Adam(parameters_optim,
                                      weight_decay=self.hparams['l2_reg'])

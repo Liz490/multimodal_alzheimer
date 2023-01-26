@@ -66,7 +66,7 @@ def optuna_objective(trial):
         'max_epochs': 20,
         'path_pet': PATH_PET_CNN,
         'path_mri': PATH_MRI_CNN,
-        'n_classes': 2,
+        'n_classes': 3,
         'gpu_id': 2,
         'reduce_factor_lr_schedule': None,
         'best_k_checkpoints': 3
@@ -77,11 +77,21 @@ def optuna_objective(trial):
     l2_options = [0, 1e-1, 1e-2, 1e-3]
     lr_min = 1e-5
     lr_max = 1e-2
+    lr_pretrained_min = 1e-7
+    lr_pretrained_max = 1e-5
     gamma_options = [None, 1, 2, 5]
     
 
     # Let optuna select hyperparameters based on options defined above
     hparams['lr'] = trial.suggest_float('lr', lr_min, lr_max, log=True)
+    # freeze = trial.suggest_categorical('freeze', (True, False))
+    freeze = False
+    if not freeze:
+        # Only set lr_pretrained if optuna selected freeze=False
+        hparams['lr_pretrained'] = trial.suggest_float(
+            'lr_pretrained', lr_pretrained_min, lr_pretrained_max, log=True)
+    else:
+        hparams['lr_pretrained'] = None
     hparams['batch_size'] = trial.suggest_categorical('batch_size',
                                                       batch_size_options)
     if hparams['batch_size'] >= 64:

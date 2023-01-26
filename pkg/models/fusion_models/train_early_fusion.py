@@ -12,7 +12,7 @@ from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelChec
 from pkg.utils.dataloader import MultiModalDataset
 
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'early_fusion'
+EXPERIMENT_NAME = 'early_fusion_same_normalization'
 EXPERIMENT_VERSION = None
 
 
@@ -145,8 +145,10 @@ def train(hparams,
     assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
     if hparams['n_classes'] == 2:
         binary_classification=True
+        normalization_mri = {'all_scan_norm': {'mean': 426.9336, 'std': 1018.7830}}
     else:
         binary_classification=False
+        normalization_mri = {'all_scan_norm': {'mean': 414.8254, 'std': 920.8566}}
 
     # DATASET AND DATALOADER
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
@@ -164,7 +166,7 @@ def train(hparams,
     valset = MultiModalDataset(
         path=valpath, 
         modalities=['pet1451', 't1w'], 
-        normalize_mri={'per_scan_norm': 'min_max'},
+        normalize_mri=normalization_mri,
         normalize_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']},
         binary_classification=binary_classification, 
         quantile=hparams['norm_percentile'])

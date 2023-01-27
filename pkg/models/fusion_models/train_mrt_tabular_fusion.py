@@ -69,7 +69,7 @@ def optuna_objective(trial):
         'ensemble_size': 4,
         'best_k_checkpoints': 3
     }
-    hparams['path_mri'] == PATH_MRI_CNN_2_CLASS if hparams['n_classes']==2 else PATH_MRI_CNN_3_CLASS
+    hparams['path_mri'] = PATH_MRI_CNN_2_CLASS if hparams['n_classes']==2 else PATH_MRI_CNN_3_CLASS
 
     # Define hyperparameter options and ranges
     batch_size_options = [8, 16, 32, 64]
@@ -111,7 +111,7 @@ def optuna_objective(trial):
         return math.inf
 
 
-def train_anat_tabular(hparams, model_mri, experiment_name='', experiment_version=None):
+def train_anat_tabular(hparams, experiment_name='', experiment_version=None):
     """
     Train model for MRI data.
 

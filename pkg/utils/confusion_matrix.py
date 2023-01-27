@@ -45,14 +45,16 @@ def generate_loggable_confusion_matrix(
 
 def confusion_matrix(outputs: torch.Tensor,
                      labels: torch.Tensor,
-                     label_idx_by_name: dict[str, int]) -> Figure:
+                     label_idx_by_name: dict[str, int],
+                     ) -> Figure:
     """
     Implemented in majority voting.
     """
     n_classes = len(label_idx_by_name)
-
-    confusion = torchmetrics.ConfusionMatrix(num_classes=n_classes).to(
+    task = "binary" if n_classes == 2 else "multiclass"
+    confusion = torchmetrics.ConfusionMatrix(num_classes=n_classes, task=task).to(
         outputs.get_device())
+    outputs = torch.max(outputs, dim=1)[1]
     confusion(outputs, labels)
     computed_confusion = confusion.compute().detach().cpu().numpy().astype(int)
 

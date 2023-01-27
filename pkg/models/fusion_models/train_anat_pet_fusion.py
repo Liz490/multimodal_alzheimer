@@ -93,9 +93,7 @@ def optuna_objective(trial):
 
     # Let optuna select hyperparameters based on options defined above
     hparams['lr'] = trial.suggest_float('lr', lr_min, lr_max, log=True)
-    # freeze = trial.suggest_categorical('freeze', (True, False))
-    freeze = False
-    if not freeze:
+    if hparams['n_classes']==3:
         # Only set lr_pretrained if optuna selected freeze=False
         hparams['lr_pretrained'] = trial.suggest_float(
             'lr_pretrained', lr_pretrained_min, lr_pretrained_max, log=True)
@@ -150,7 +148,7 @@ def train_anat_pet(hparams, experiment_name='', experiment_version=None):
         binary_classification=False
         model_pet = MODEL_PET_3_CLASS
         model_mri = MODEL_MRI_3_CLASS
-    
+
     
     # Setup datasets and dataloaders
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')

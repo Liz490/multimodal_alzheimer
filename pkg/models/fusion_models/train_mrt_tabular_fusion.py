@@ -16,12 +16,15 @@ LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'tabular_mri_fusion_two_class'
 EXPERIMENT_VERSION = None
 
-# MRI model
-BASEPATH = "/u/home/eisln/adlm_adni"
-PATH_MRI_CNN = os.path.join(BASEPATH, 'lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt')
 
-MODEL_MRI = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN)
+# MRI models
+BASEPATH = '/u/home/eisln/adlm_adni'
+PATH_MRI_CNN_2_CLASS = '/data2/practical-wise2223/adni/adni_1/lightning_checkpoints/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt'
+PATH_MRI_CNN_3_CLASS = os.path.join(BASEPATH, 'lightning_logs/optuna_mri_3_class/version_48/checkpoints/epoch=32-step=32.ckpt')
 
+# load checkpoints
+MODEL_MRI_2_CLASS = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN_2_CLASS)
+MODEL_MRI_3_CLASS = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN_3_CLASS)
 
 def options_list_to_dict(options: list) -> tuple[list, dict]:
     """
@@ -60,13 +63,13 @@ def optuna_objective(trial):
     hparams = {
         'early_stopping_patience': 5,
         'max_epochs': 20,
-        'path_mri': PATH_MRI_CNN,
         'n_classes': 3,
         'gpu_id': 2,
         'reduce_factor_lr_schedule': None,
         'ensemble_size': 4,
         'best_k_checkpoints': 3
     }
+    hparams['path_mri'] == PATH_MRI_CNN_2_CLASS if hparams['n_classes']==2 else PATH_MRI_CNN_3_CLASS
 
     # Define hyperparameter options and ranges
     batch_size_options = [8, 16, 32, 64]
@@ -100,7 +103,6 @@ def optuna_objective(trial):
     # Train network
     try:
         val_loss = train_anat_tabular(hparams=hparams,
-                                  model_mri=MODEL_MRI,
                                   experiment_name=EXPERIMENT_NAME,
                                   experiment_version=EXPERIMENT_VERSION)
         return val_loss
@@ -129,8 +131,10 @@ def train_anat_tabular(hparams, model_mri, experiment_name='', experiment_versio
     assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
     if hparams['n_classes'] == 2:
         binary_classification = True
+        model_mri = MODEL_MRI_2_CLASS
     else:
         binary_classification = False
+        model_mri = MODEL_MRI_3_CLASS
 
     # Setup datasets and dataloaders
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
@@ -237,11 +241,12 @@ if __name__ == '__main__':
         'ensemble_size': 4,
         'l2_reg': 0,
         'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
-        'reduce_factor_lr_schedule': 0.1
+        'reduce_factor_lr_schedule': 0.1,
+        'lr_pretrained': 0.00000005,
+        'best_k_checkpoints': 3
     }
 
     train_anat_tabular(hparams,
-                   model_mri=MODEL_MRI,
                    experiment_name='best_runs',
                    experiment_version='2stage_tabular_mri_2_class')
 

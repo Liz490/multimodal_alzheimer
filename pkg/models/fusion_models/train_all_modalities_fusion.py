@@ -65,8 +65,9 @@ def optuna_objective(trial):
     hparams = {
         'early_stopping_patience': 5,
         'max_epochs': 20,
-        'path_pet_mri': PATH_PET_MRI,
-        'path_tab_mri': PATH_TAB_MRI,
+        'path_anat_pet': PATH_PET_MRI,
+        'path_anat_tab': PATH_TAB_MRI,
+        'path_pet_tab': PATH_PET_TAB,
         'n_classes': 2,
         'gpu_id': 2,
         'reduce_factor_lr_schedule': None,
@@ -123,7 +124,7 @@ def train(hparams, experiment_name='', experiment_version=None):
 
     trainset = MultiModalDataset(
         path=trainpath,
-        modalities=['pet1451', 't1w'],
+        modalities=['pet1451', 't1w', 'tabular'],
         normalize_mri={'per_scan_norm': 'min_max'},
         normalize_pet={'mean': MODEL_PET.hparams['norm_mean'],
                        'std': MODEL_PET.hparams['norm_std']},
@@ -131,7 +132,7 @@ def train(hparams, experiment_name='', experiment_version=None):
         quantile=MODEL_MRI.hparams['norm_percentile'])
     valset = MultiModalDataset(
         path=valpath,
-        modalities=['pet1451', 't1w'],
+        modalities=['pet1451', 't1w', 'tabular'],
         normalize_mri={'per_scan_norm': 'min_max'},
         normalize_pet={'mean': MODEL_PET.hparams['norm_mean'],
                        'std': MODEL_PET.hparams['norm_std']},
@@ -155,7 +156,7 @@ def train(hparams, experiment_name='', experiment_version=None):
     _, weight_normalized = trainset.get_label_distribution()
     hparams['loss_class_weights'] = 1 - weight_normalized
 
-    model = AllModalitiesFusion(hparams=hparams)
+    model = All_Modalities_Fusion(hparams=hparams)
 
     tb_logger = pl.loggers.TensorBoardLogger(
         save_dir='lightning_logs',

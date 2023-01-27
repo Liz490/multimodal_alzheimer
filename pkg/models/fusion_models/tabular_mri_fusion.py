@@ -12,7 +12,7 @@ TRAIN_PATH ='/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
 
 
 class Tabular_MRT_Model(pl.LightningModule):
-    def __init__(self, hparams):
+    def __init__(self, hparams, path_mri=None):
         super().__init__()
         self.save_hyperparameters(hparams)
         if hparams["n_classes"] == 3:
@@ -20,7 +20,11 @@ class Tabular_MRT_Model(pl.LightningModule):
         else:
             self.label_ind_by_names = {'CN': 0, 'AD': 1}
 
-        self.model_mri = Anat_CNN.load_from_checkpoint(hparams["path_mri"])
+        # load checkpoints
+        if path_mri:
+            self.model_mri = Anat_CNN.load_from_checkpoint(path_mri)
+        else:
+            self.model_mri = Anat_CNN.load_from_checkpoint(hparams["path_mri"])
         self.model_mri.model.conv_seg = self.model_mri.model.conv_seg[:2]
 
         # Load models and save training sample size
@@ -148,6 +152,10 @@ class Tabular_MRT_Model(pl.LightningModule):
                 parameters_optim.append({
                 'params': param,
                 'lr': self.hparams['lr_pretrained']})
+            for name, param in self.model_tabular.model[2].named_parameters():
+                parameters_optim.append({
+                    'params': param,
+                    'lr': self.hparams['lr_pretrained']})
                 
         optimizer = torch.optim.Adam(parameters_optim,
                                 weight_decay=self.hparams['l2_reg'])

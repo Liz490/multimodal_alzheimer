@@ -32,7 +32,7 @@ class IntHandler:
 TRAINPATH='/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
 class PET_TABULAR_CNN(pl.LightningModule):
 
-    def __init__(self, hparams):
+    def __init__(self, hparams, path_pet=None):
         super().__init__()
         self.save_hyperparameters(hparams)
         if hparams["n_classes"] == 3:
@@ -41,7 +41,10 @@ class PET_TABULAR_CNN(pl.LightningModule):
             self.label_ind_by_names = {'CN': 0, 'AD': 1}
 
         # load checkpoints
-        self.model_pet = Small_PET_CNN.load_from_checkpoint(hparams["path_pet"])
+        if path_pet:
+            self.model_pet = Small_PET_CNN.load_from_checkpoint(path_pet)
+        else:
+            self.model_pet = Small_PET_CNN.load_from_checkpoint(hparams["path_pet"])
 
         # cut the model after GAP + flatten
         # Note: architectures for 2-class and 3-class problem might deviate slightly
@@ -184,6 +187,10 @@ class PET_TABULAR_CNN(pl.LightningModule):
                 parameters_optim.append({
                 'params': param,
                 'lr': self.hparams['lr_pretrained']})
+            for name, param in self.model_tabular.model[2].named_parameters():
+                parameters_optim.append({
+                    'params': param,
+                    'lr': self.hparams['lr_pretrained']})
 
         # pass parameters of fusion and reduce-dim network to optimizer
         optimizer = torch.optim.Adam(parameters_optim,

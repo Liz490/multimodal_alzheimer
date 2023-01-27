@@ -3,8 +3,8 @@ import torch.nn as nn
 import pytorch_lightning as pl
 from torchmetrics.classification import MulticlassF1Score
 from pkg.models.fusion_models.anat_pet_fusion import Anat_PET_CNN
-from pkg.models.fusion_models.tabular_mri_fusion import Tabular_MRI_CNN
-# TODO import tabular_pet_fusion
+from pkg.models.fusion_models.tabular_mri_fusion import Tabular_MRT_Model
+from pkg.models.fusion_models.pet_tabular_fusion import PET_TABULAR_CNN
 
 from pkg.loss_functions.focalloss import FocalLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -23,15 +23,16 @@ class All_Modalities_Fusion(pl.LightningModule):
 
         # load checkpoints
         self.model_anat_pet = Anat_PET_CNN.load_from_checkpoint(
-            hparams["path_anat_pet"])
-        self.model_anat_tab = Tabular_MRI_CNN.load_from_checkpoint(
-            hparams["path_anat_tab"])
-        # TODO self.model_pet_tab = Tabular_PET_CNN.load_from_checkpoint(
-        # hparams["path_pet_tab"])
+            hparams["path_anat_pet"], path_pet=hparams['path_pet'] , path_anat=hparams['path_anat'])
+        self.model_anat_tab = Tabular_MRT_Model.load_from_checkpoint(
+            hparams["path_anat_tab"], path_mri=hparams['path_anat'])
+        self.model_pet_tab = PET_TABULAR_CNN.load_from_checkpoint(
+            hparams["path_pet_tab"], path_pet=hparams['path_pet'])
 
         # cut of the classifiers from the second stage models
         self.model_anat_pet.model_fuse = self.model_anat_pet.model_fuse[:-2]
         self.model_anat_tab.model_fuse = self.model_anat_tab.model_fuse[:-2]
+        self.model_pet_tab.model_fuse = self.model_pet_tab.model_fuse[:-2]
 
         # Freeze weights in the stage-2 models
         for _, param in self.model_anat_pet.reduce_dim_mri.named_parameters():
@@ -42,9 +43,13 @@ class All_Modalities_Fusion(pl.LightningModule):
             param.requires_grad = False
         for _, param in self.model_anat_tab.model_fuse.named_parameters():
             param.requires_grad = False
+        for _, param in self.model_pet_tab.model_fuse.named_parameters():
+            param.requires_grad = False
+        for _, param in self.model_pet_tab.reduce_tab.named_parameters():
+            param.requires_grad = False
 
         # linear layers after concatenation
-        self.stage3out = nn.Linear(64 + 64, 64)
+        self.stage3out = nn.Linear(64 + 64 + 64, 64)
         self.cls3 = nn.Linear(64, hparams["n_classes"])
 
         # non-linearities
@@ -75,7 +80,8 @@ class All_Modalities_Fusion(pl.LightningModule):
         """
         out_anat_pet = self.model_anat_pet(x_pet, x_mri)
         out_anat_tab = self.model_anat_tab(x_tab, x_mri)
-        out = torch.cat((out_anat_pet, out_anat_tab), dim=1)
+        out_pet_tab = self.model_pet_tab(x_pet, x_tab)
+        out = torch.cat((out_anat_pet, out_anat_tab, out_pet_tab), dim=1)
         out = self.model_fuse(out)
         return out
 

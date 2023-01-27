@@ -14,14 +14,17 @@ from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelChec
 
 # tensorboard and checkpoint logging
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'optuna_pet_tabular_fusion_two_class'
+EXPERIMENT_NAME = 'optuna_unfrozen_pet_tabular_fusion_three_class'
 EXPERIMENT_VERSION = None
 
 # PET and MRI models
-BASEPATH = "/u/home/eisln/adlm_adni"
-PATH_PET_CNN = os.path.join(BASEPATH, 'lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt')
+BASEPATH = '/u/home/eisln/adlm_adni'
+PATH_PET_CNN_2_CLASS = '/data2/practical-wise2223/adni/adni_1/lightning_checkpoints/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt'
+PATH_PET_CNN_3_CLASS = os.path.join(BASEPATH, 'lightning_logs/pet_3_class_retrain_best/v204/checkpoints/epoch=28-step=28.ckpt')
+
 # load checkpoints
-MODEL_PET = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN)
+MODEL_PET_2_CLASS = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN_2_CLASS)
+MODEL_PET_3_CLASS = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN_3_CLASS)
 
 
 def options_list_to_dict(options: list) -> tuple[list, dict]:
@@ -61,13 +64,16 @@ def optuna_objective(trial):
     hparams = {
         'early_stopping_patience': 5,
         'max_epochs': 20,
-        'path_pet': PATH_PET_CNN,
         'n_classes': 3,
         'gpu_id': 2,
         'reduce_factor_lr_schedule': None,
         'ensemble_size': 4,
         'best_k_checkpoints': 3
     }
+
+
+    hparams['path_pet'] = PATH_PET_CNN_2_CLASS if hparams['n_classes'] == 2 else PATH_PET_CNN_3_CLASS
+
 
     # Define hyperparameter options and ranges
     batch_size_options = [8, 16, 32, 64]
@@ -83,9 +89,7 @@ def optuna_objective(trial):
     # Let optuna select hyperparameters based on options defined above
     hparams['simple_dim_red'] = trial.suggest_categorical('simple_dim_red', dim_red_options)
     hparams['lr'] = trial.suggest_float('lr', lr_min, lr_max, log=True)
-    # freeze = trial.suggest_categorical('freeze', (True, False))
-    freeze = False
-    if not freeze:
+    if hparams['n_classes']==3:
         # Only set lr_pretrained if optuna selected freeze=False
         hparams['lr_pretrained'] = trial.suggest_float(
             'lr_pretrained', lr_pretrained_min, lr_pretrained_max, log=True)
@@ -105,7 +109,6 @@ def optuna_objective(trial):
     # Train network
     try:
         val_loss = train_pet_tabular(hparams=hparams,
-                                  model_pet=MODEL_PET,
                                   experiment_name=EXPERIMENT_NAME,
                                   experiment_version=EXPERIMENT_VERSION)
         return val_loss
@@ -114,7 +117,7 @@ def optuna_objective(trial):
         return math.inf
 
 
-def train_pet_tabular(hparams, model_pet, experiment_name='', experiment_version=None):
+def train_pet_tabular(hparams, experiment_name='', experiment_version=None):
     """
     Train model for MRI data.
 
@@ -135,8 +138,10 @@ def train_pet_tabular(hparams, model_pet, experiment_name='', experiment_version
     assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
     if hparams['n_classes'] == 2:
         binary_classification = True
+        model_pet = MODEL_PET_2_CLASS
     else:
         binary_classification = False
+        model_pet = MODEL_PET_3_CLASS
 
     # Setup datasets and dataloaders
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
@@ -237,17 +242,22 @@ if __name__ == '__main__':
     #     'norm_std_train': 918.5371,
     #     'norm_mean_val': 418.4120,
     #     'norm_std_val': 830.2466,
-    #     'n_classes': 2,
+    #     'n_classes': 3,
     #     'lr': 0.0008678312514285887,
     #     'batch_size': 32,
     #     'ensemble_size': 4,
     #     'fl_gamma': 5,
     #     'l2_reg': 0,
-    #     'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt',
-    #     'reduce_factor_lr_schedule': 0.1
+    #     'reduce_factor_lr_schedule': 0.1,
+    #     'lr_pretrained': 0.000001,
+    #     'best_k_checkpoints': 3
     # }
     #
+    # if hparams['n_classes'] == 2:
+    #     hparams['path_pet'] = PATH_PET_CNN_2_CLASS
+    # else:
+    #     hparams['path_pet'] = PATH_PET_CNN_3_CLASS
+    #
     # train_pet_tabular(hparams,
-    #                model_pet=MODEL_PET,
     #                experiment_name='train_runs',
     #                experiment_version='2stage_pet_tabular_2_class')

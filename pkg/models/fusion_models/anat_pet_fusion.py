@@ -12,7 +12,7 @@ from pkg.utils.confusion_matrix import generate_loggable_confusion_matrix
 
 class Anat_PET_CNN(pl.LightningModule):
 
-    def __init__(self, hparams):
+    def __init__(self, hparams, path_pet=None, path_anat=None):
         super().__init__()
         self.save_hyperparameters(hparams)
         if hparams["n_classes"] == 3:
@@ -21,8 +21,12 @@ class Anat_PET_CNN(pl.LightningModule):
             self.label_ind_by_names = {'CN': 0, 'AD': 1}
 
         # load checkpoints
-        self.model_pet = Small_PET_CNN.load_from_checkpoint(hparams["path_pet"])
-        self.model_mri = Anat_CNN.load_from_checkpoint(hparams["path_mri"])
+        if path_pet and path_anat:
+            self.model_pet = Small_PET_CNN.load_from_checkpoint(path_pet)
+            self.model_mri = Anat_CNN.load_from_checkpoint(path_anat)
+        else:
+            self.model_pet = Small_PET_CNN.load_from_checkpoint(hparams["path_pet"])
+            self.model_mri = Anat_CNN.load_from_checkpoint(hparams["path_mri"])
         
         # cut the model after GAP + flatten
         # Note: architectures for 2-class and 3-class problem might deviate slightly

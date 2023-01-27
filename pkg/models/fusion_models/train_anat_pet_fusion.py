@@ -243,25 +243,25 @@ if __name__ == '__main__':
     # optuna_optimization()
     #####################
 
-    # fine-tune best run 2 class (version 56)
-    hparams = {
-        'early_stopping_patience': 30,
-        'max_epochs': 300,
-        'norm_mean_train': 413.6510,
-        'norm_std_train': 918.5371,
-        'norm_mean_val': 418.4120,
-        'norm_std_val': 830.2466,
-        'n_classes': 2,
-        'lr': 0.0008678312514285887,
-        'batch_size': 32,
-        'fl_gamma': 5,
-        'l2_reg': 0,
-        # 'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
-        # 'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt',
-        'reduce_factor_lr_schedule': 0.1,
-        'lr_pretrained': None,
-        'best_k_checkpoints': 3
-    }
+    # # fine-tune best run 2 class (version 56)
+    # hparams = {
+    #     'early_stopping_patience': 30,
+    #     'max_epochs': 300,
+    #     'norm_mean_train': 413.6510,
+    #     'norm_std_train': 918.5371,
+    #     'norm_mean_val': 418.4120,
+    #     'norm_std_val': 830.2466,
+    #     'n_classes': 2,
+    #     'lr': 0.0008678312514285887,
+    #     'batch_size': 32,
+    #     'fl_gamma': 5,
+    #     'l2_reg': 0,
+    #     # 'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
+    #     # 'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt',
+    #     'reduce_factor_lr_schedule': 0.1,
+    #     'lr_pretrained': None,
+    #     'best_k_checkpoints': 3
+    # }
 
     # # fine-tune best run 3 class (version 26)
     # hparams = {
@@ -284,6 +284,27 @@ if __name__ == '__main__':
     #     'best_k_checkpoints': 3
     # }
 
+    # # fine-tune best run 3 class UNFROZEN (version 28)
+    hparams = {
+        'early_stopping_patience': 30,
+        'max_epochs': 300,
+        'norm_mean_train': 413.6510,
+        'norm_std_train': 918.5371,
+        'norm_mean_val': 418.4120,
+        'norm_std_val': 830.2466,
+        'n_classes': 3,
+        'lr': 2.6121710797334304e-05,
+        'batch_size': 64,
+        'fl_gamma': 1,
+        'l2_reg': 0.001,
+        # 'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/optuna_mri_3_class/version_48/checkpoints/epoch=32-step=32.ckpt',
+        # 'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/pet_3_class_retrain_best/v204/checkpoints/epoch=28-step=28.ckpt',
+        'reduce_factor_lr_schedule': 0.1,
+        'norm_percentile': 0.95,
+        'lr_pretrained': 2.1490997404925147e-06,
+        'best_k_checkpoints': 3
+    }
+
     if hparams['n_classes'] == 2:
         hparams['path_pet'] = PATH_PET_CNN_2_CLASS
         hparams['path_mri'] = PATH_MRI_CNN_2_CLASS
@@ -294,5 +315,5 @@ if __name__ == '__main__':
     train_anat_pet(hparams, 
                 # model_pet=MODEL_PET,
                 # model_mri=MODEL_MRI,
-                experiment_name='testruns', #'best_pet_mri_3_class'
-                experiment_version='both_paths') # 2stage_pet_mri_2_class
+                experiment_name='best_pet_mri_3_class_frozen', #'best_pet_mri_3_class'
+                experiment_version='v28') # 2stage_pet_mri_2_class

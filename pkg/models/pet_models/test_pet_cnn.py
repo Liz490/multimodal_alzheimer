@@ -14,7 +14,7 @@ HPARAMS_PET_CNN_2_CLASS = {
 }
 
 
-def pet_dataset_and_model(binary_classification: bool,
+def pet_testset_and_model(binary_classification: bool,
                           hparams: dict,
                           test_csv_path: Path,
                           checkpoint_path: Path):
@@ -32,4 +32,4 @@ def pet_dataset_and_model(binary_classification: bool,
 
 
 if __name__ == '__main__':
-    test(pet_dataset_and_model, PATH_PET_CNN_2_CLASS, HPARAMS_PET_CNN_2_CLASS)
+    test(pet_testset_and_model, PATH_PET_CNN_2_CLASS, HPARAMS_PET_CNN_2_CLASS)

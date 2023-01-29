@@ -9,7 +9,6 @@ from pkg.models.base_model import Base_Model
 
 class Small_PET_CNN(Base_Model):
     def __init__(self, hparams, gpu_id=None):
-        self.save_hyperparameters(hparams)
         super().__init__(hparams, gpu_id=gpu_id)
 
         modules = nn.ModuleList()

@@ -7,6 +7,23 @@ from typing import Callable
 def test(init_dataset_and_model: Callable,
          checkpoint_path: Path,
          hparams: dict):
+    """
+    Test a model on the test set. Logs results to tensorboard under
+    the name of the checkpoints parent directory. I.e.
+    lightning_logs/test_set_<name of checkpoint parent directory>.
+
+    Args:
+        init_dataset_and_model (Callable): Function that returns a testset and
+            a model. The function should take the following arguments:
+                binary_classification (bool): Whether the model is a binary
+                    classification model.
+                hparams (dict): Hyperparameters of the models dataloader.
+                test_csv_path (Path): Path to the csv file containing the test
+                    set paths and labels.
+                checkpoint_path (Path): Path to the checkpoint of the model.
+        checkpoint_path (Path): Path to the checkpoint of the model.
+        hparams (dict): Hyperparameters of the models dataloader.
+    """
     pl.seed_everything(5, workers=True)
     experiment_name = 'test_set_' + checkpoint_path.parents[1].name
 

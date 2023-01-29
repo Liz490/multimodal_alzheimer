@@ -35,18 +35,19 @@ class All_Modalities_Fusion(pl.LightningModule):
         self.model_pet_tab.model_fuse = self.model_pet_tab.model_fuse[:-2]
 
         # Freeze weights in the stage-2 models
-        for _, param in self.model_anat_pet.reduce_dim_mri.named_parameters():
-            param.requires_grad = False
-        for _, param in self.model_anat_pet.model_fuse.named_parameters():
-            param.requires_grad = False
-        for _, param in self.model_anat_tab.reduce_tab.named_parameters():
-            param.requires_grad = False
-        for _, param in self.model_anat_tab.model_fuse.named_parameters():
-            param.requires_grad = False
-        for _, param in self.model_pet_tab.model_fuse.named_parameters():
-            param.requires_grad = False
-        for _, param in self.model_pet_tab.reduce_tab.named_parameters():
-            param.requires_grad = False
+        if not self.hparams['lr_pretrained']:
+            for _, param in self.model_anat_pet.reduce_dim_mri.named_parameters():
+                param.requires_grad = False
+            for _, param in self.model_anat_pet.model_fuse.named_parameters():
+                param.requires_grad = False
+            for _, param in self.model_anat_tab.reduce_tab.named_parameters():
+                param.requires_grad = False
+            for _, param in self.model_anat_tab.model_fuse.named_parameters():
+                param.requires_grad = False
+            for _, param in self.model_pet_tab.model_fuse.named_parameters():
+                param.requires_grad = False
+            for _, param in self.model_pet_tab.reduce_tab.named_parameters():
+                param.requires_grad = False
 
         # linear layers after concatenation
         self.stage3out = nn.Linear(64 + 64 + 64, 64)
@@ -138,6 +139,27 @@ class All_Modalities_Fusion(pl.LightningModule):
             parameters_optim.append({
                 'params': param,
                 'lr': self.hparams['lr']})
+
+        if self.hparams['lr_pretrained']:
+            previous_stage_models = [self.model_anat_pet.model_pet,
+                                     self.model_anat_pet.model_mri,
+                                     self.model_anat_pet.stage2out,
+                                     self.model_anat_pet.reduce_dim_mri,
+                                     self.model_pet_tab.model_pet,
+                                     self.model_pet_tab.model_tabular,
+                                     self.model_pet_tab.stage2out,
+                                     self.model_pet_tab.reduce_tab,
+                                     self.model_anat_tab.model_mri,
+                                     self.model_anat_tab.model_tabular,
+                                     self.model_anat_tab.stage2out,
+                                     self.model_anat_tab.reduce_tab
+                                     ]
+            # unfreeze all previous stages
+            for model in previous_stage_models:
+                for _, param in model.named_parameters():
+                    parameters_optim.append({
+                        'params': param,
+                        'lr': self.hparams['lr_pretrained']})
         # pass parameters of fusion network to optimizer
         optimizer = torch.optim.Adam(parameters_optim,
                                      weight_decay=self.hparams['l2_reg'])

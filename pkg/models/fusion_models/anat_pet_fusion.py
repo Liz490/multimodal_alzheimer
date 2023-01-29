@@ -37,7 +37,7 @@ class Anat_PET_CNN(pl.LightningModule):
         self.model_mri.model.conv_seg = self.model_mri.model.conv_seg[:2]
 
         # Freeze weights in the stage-1 models
-        if not self.hparams['lr_pretrained']:
+        if ('lr_pretrained' not in hparams.keys()
             for name, param in self.model_pet.named_parameters():
                 param.requires_grad = False
             for name, param in self.model_mri.named_parameters():

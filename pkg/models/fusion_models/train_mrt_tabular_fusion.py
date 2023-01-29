@@ -199,10 +199,10 @@ def train_anat_tabular(hparams, experiment_name='', experiment_version=None):
                             filename='epoch={epoch}-val_loss={val_loss_epoch:.3f}',
                             auto_insert_metric_name=False),
             ModelCheckpoint(monitor='val_f1_epoch',
-                        save_top_k=hparams['best_k_checkpoints'],
-                        mode='max',
-                        filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
-                        auto_insert_metric_name=False)
+                            save_top_k=hparams['best_k_checkpoints'],
+                            mode='max',
+                            filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
+                            auto_insert_metric_name=False)
         ]
     )
 

@@ -23,11 +23,15 @@ class All_Modalities_Fusion(pl.LightningModule):
 
         # load checkpoints
         self.model_anat_pet = Anat_PET_CNN.load_from_checkpoint(
-            hparams["path_anat_pet"], path_pet=hparams['path_pet'] , path_anat=hparams['path_anat'])
+            hparams["path_anat_pet"],
+            path_pet=hparams['path_pet'],
+            path_anat=hparams['path_anat'])
         self.model_anat_tab = Tabular_MRT_Model.load_from_checkpoint(
-            hparams["path_anat_tab"], path_mri=hparams['path_anat'])
+            hparams["path_anat_tab"],
+            path_mri=hparams['path_anat'])
         self.model_pet_tab = PET_TABULAR_CNN.load_from_checkpoint(
-            hparams["path_pet_tab"], path_pet=hparams['path_pet'])
+            hparams["path_pet_tab"],
+            path_pet=hparams['path_pet'])
 
         # cut of the classifiers from the second stage models
         self.model_anat_pet.model_fuse = self.model_anat_pet.model_fuse[:-2]

@@ -29,7 +29,8 @@ class Anat_PET_CNN(pl.LightningModule):
             self.model_mri = Anat_CNN.load_from_checkpoint(hparams["path_mri"])
         
         # cut the model after GAP + flatten
-        # Note: architectures for 2-class and 3-class problem might deviate slightly
+        # Note: architectures for 2-class and 3-class
+        # problem might deviate slightly
         if hparams["n_classes"] == 2:
             self.model_pet = self.model_pet.model[:-3]
         else:
@@ -43,8 +44,6 @@ class Anat_PET_CNN(pl.LightningModule):
                 param.requires_grad = False
             for name, param in self.model_mri.named_parameters():
                 param.requires_grad = False
-        
-        
         # linear layers after concatenation
         self.stage2out = nn.Linear(64 + 64, 64)
         self.cls2 = nn.Linear(64, hparams["n_classes"])
@@ -64,8 +63,10 @@ class Anat_PET_CNN(pl.LightningModule):
             self.criterion = nn.CrossEntropyLoss(
                 weight=hparams['loss_class_weights'])
 
-        self.f1_score_train = MulticlassF1Score(num_classes=hparams["n_classes"], average='macro')
-        self.f1_score_val = MulticlassF1Score(num_classes=hparams["n_classes"], average='macro')
+        self.f1_score_train = MulticlassF1Score(num_classes=hparams["n_classes"],
+                                                average='macro')
+        self.f1_score_val = MulticlassF1Score(num_classes=hparams["n_classes"],
+                                              average='macro')
         
 
     def forward(self, x_pet, x_mri):

@@ -9,6 +9,8 @@ from pkg.utils.confusion_matrix import generate_loggable_confusion_matrix
 class Base_Model(pl.LightningModule, ABC):
     def __init__(self, hparams, gpu_id=None):
         super().__init__()
+        self.save_hyperparameters(hparams, ignore=["gpu_id"])
+
         if hparams["n_classes"] == 3:
             self.label_ind_by_names = {'CN': 0, 'MCI': 1, 'AD': 2}
         else:

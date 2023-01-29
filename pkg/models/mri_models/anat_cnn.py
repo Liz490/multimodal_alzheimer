@@ -1,27 +1,19 @@
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
-from torchmetrics.classification import MulticlassF1Score
 
 from MedicalNet.model import generate_model
 from MedicalNet.setting import parse_opts
-import sys
 import os
 
 from pkg.loss_functions.focalloss import FocalLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from pkg.utils.confusion_matrix import generate_loggable_confusion_matrix
+from pkg.models.base_model import Base_Model
 
 
-class Anat_CNN(pl.LightningModule):
+class Anat_CNN(Base_Model):
 
     def __init__(self, hparams, gpu_id=None):
-        super().__init__()
-        self.save_hyperparameters(hparams, ignore=["gpu_id"])
-        if hparams["n_classes"] == 3:
-            self.label_ind_by_names = {'CN': 0, 'MCI': 1, 'AD': 2}
-        else:
-            self.label_ind_by_names = {'CN': 0, 'AD': 1}
+        super().__init__(hparams)
 
         # Initialize Model
         opts = parse_opts()
@@ -93,10 +85,6 @@ class Anat_CNN(pl.LightningModule):
             self.criterion = nn.CrossEntropyLoss(
                 weight=hparams['loss_class_weights'])
 
-        self.f1_score_train = MulticlassF1Score(
-            num_classes=hparams["n_classes"], average='macro')
-        self.f1_score_val = MulticlassF1Score(
-            num_classes=hparams["n_classes"], average='macro')
 
     def forward(self, x):
         """
@@ -109,24 +97,6 @@ class Anat_CNN(pl.LightningModule):
         x = self.model(x)
 
         return x
-
-    @property
-    def is_cuda(self):
-        """
-        Check if model parameters are allocated on the GPU.
-        """
-        return next(self.parameters()).is_cuda
-
-    def save(self, path):
-        """
-        Save model with its parameters to the given path. Conventionally the
-        path should end with "*.model".
-
-        Inputs:
-        - path: path string
-        """
-        print('Saving model... %s' % path)
-        torch.save(self, path)
 
     def general_step(self, batch, batch_idx, mode):
         x = batch['mri']
@@ -143,15 +113,6 @@ class Anat_CNN(pl.LightningModule):
         elif mode == 'train':
             self.f1_score_train(y_hat, y)
         return {'loss': loss, 'outputs': y_hat, 'labels': y}
-
-    def training_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "train")
-
-    def validation_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "val")
-
-    def predict_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "pred")
 
     def configure_optimizers(self):
         parameters_optim = []
@@ -179,35 +140,3 @@ class Anat_CNN(pl.LightningModule):
                     "monitor": "val_loss_epoch"}
         else:
             return optimizer
-
-    def training_epoch_end(self, training_step_outputs):
-        avg_loss = torch.stack([x['loss']
-                               for x in training_step_outputs]).mean()
-        f1_epoch = self.f1_score_train.compute()
-        self.f1_score_train.reset()
-
-        self.log_dict({
-            'train_loss_epoch': avg_loss,
-            'train_f1_epoch': f1_epoch,
-            'step': float(self.current_epoch)
-        })
-        im = generate_loggable_confusion_matrix(training_step_outputs,
-                                                self.label_ind_by_names)
-        self.logger.experiment.add_image(
-            "train_confusion_matrix", im, global_step=self.current_epoch)
-
-    def validation_epoch_end(self, validation_step_outputs):
-        avg_loss = torch.stack([x['loss']
-                               for x in validation_step_outputs]).mean()
-        f1_epoch = self.f1_score_val.compute()
-        self.f1_score_val.reset()
-
-        self.log_dict({
-            'val_loss_epoch': avg_loss,
-            'val_f1_epoch': f1_epoch,
-            'step': float(self.current_epoch)
-        })
-        im = generate_loggable_confusion_matrix(validation_step_outputs,
-                                                self.label_ind_by_names)
-        self.logger.experiment.add_image(
-            "val_confusion_matrix", im, global_step=self.current_epoch)

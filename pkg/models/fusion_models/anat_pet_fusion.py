@@ -38,6 +38,7 @@ class Anat_PET_CNN(pl.LightningModule):
 
         # Freeze weights in the stage-1 models
         if ('lr_pretrained' not in hparams.keys()
+            or not self.hparams['lr_pretrained']):
             for name, param in self.model_pet.named_parameters():
                 param.requires_grad = False
             for name, param in self.model_mri.named_parameters():

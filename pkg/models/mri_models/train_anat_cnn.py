@@ -169,9 +169,9 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
 
     assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
     if hparams['n_classes'] == 2:
-        binary_classification=True
+        binary_classification = True
     else:
-        binary_classification=False
+        binary_classification = False
 
     # Setup datasets and dataloaders
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
@@ -179,10 +179,10 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
 
     trainset = MultiModalDataset(
         path=trainpath, modalities=['t1w'], normalize_mri={'per_scan_norm': 'min_max'},
-        binary_classification=True, quantile=hparams['norm_percentile'])
+        binary_classification=binary_classification, quantile=hparams['norm_percentile'])
     valset = MultiModalDataset(
         path=valpath, modalities=['t1w'], normalize_mri={'per_scan_norm': 'min_max'},
-        binary_classification=True, quantile=hparams['norm_percentile'])
+        binary_classification=binary_classification, quantile=hparams['norm_percentile'])
 
     trainloader = DataLoader(
         trainset,

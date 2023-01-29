@@ -153,20 +153,18 @@ def train(hparams,
     # DATASET AND DATALOADER
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
-
-    remove_mci = hparams["n_classes"] == 2
     
     trainset = MultiModalDataset(
         path=trainpath, 
         modalities=['pet1451', 't1w'], 
-        normalize_mri={'per_scan_norm': 'min_max'},
+        normalize_mri=normalization_mri, #{'per_scan_norm': 'min_max'},
         normalize_pet={'mean': hparams['norm_mean'], 'std': hparams['norm_std']},
         binary_classification=binary_classification, 
         quantile=hparams['norm_percentile'])
     valset = MultiModalDataset(
         path=valpath, 
         modalities=['pet1451', 't1w'], 
-        normalize_mri=normalization_mri,
+        normalize_mri=normalization_mri, #normalization_mri,
         normalize_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']},
         binary_classification=binary_classification, 
         quantile=hparams['norm_percentile'])
@@ -267,7 +265,7 @@ if __name__ == '__main__':
         'batch_size': 64,
         'conv_out': [16, 32, 64, 128],
         'filter_size': [3, 3, 3, 3],
-        'batchnorm': False,
+        # 'batchnorm': False,
         'n_classes': 2,
         'linear_out': 64,
         'dropout_dense': 0.3188563832255344,

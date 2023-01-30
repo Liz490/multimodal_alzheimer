@@ -1,33 +1,27 @@
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
-from torchmetrics.classification import MulticlassF1Score
 from pkg.models.pet_models.pet_cnn import Small_PET_CNN
 from pkg.models.mri_models.anat_cnn import Anat_CNN
 
 from pkg.loss_functions.focalloss import FocalLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from pkg.utils.confusion_matrix import generate_loggable_confusion_matrix
+from pkg.models.base_model import Base_Model
 
 
-class Anat_PET_CNN(pl.LightningModule):
+class Anat_PET_CNN(Base_Model):
 
     def __init__(self, hparams, path_pet=None, path_anat=None):
-        super().__init__()
-        self.save_hyperparameters(hparams)
-        if hparams["n_classes"] == 3:
-            self.label_ind_by_names = {'CN': 0, 'MCI': 1, 'AD': 2}
-        else:
-            self.label_ind_by_names = {'CN': 0, 'AD': 1}
+        super().__init__(hparams)
 
         # load checkpoints
         if path_pet and path_anat:
             self.model_pet = Small_PET_CNN.load_from_checkpoint(path_pet)
             self.model_mri = Anat_CNN.load_from_checkpoint(path_anat)
         else:
-            self.model_pet = Small_PET_CNN.load_from_checkpoint(hparams["path_pet"])
+            self.model_pet = Small_PET_CNN.load_from_checkpoint(
+                hparams["path_pet"])
             self.model_mri = Anat_CNN.load_from_checkpoint(hparams["path_mri"])
-        
+
         # cut the model after GAP + flatten
         # Note: architectures for 2-class and 3-class
         # problem might deviate slightly
@@ -39,7 +33,7 @@ class Anat_PET_CNN(pl.LightningModule):
 
         # Freeze weights in the stage-1 models
         if ('lr_pretrained' not in hparams.keys()
-            or not self.hparams['lr_pretrained']):
+                or not self.hparams['lr_pretrained']):
             for name, param in self.model_pet.named_parameters():
                 param.requires_grad = False
             for name, param in self.model_mri.named_parameters():
@@ -63,12 +57,6 @@ class Anat_PET_CNN(pl.LightningModule):
             self.criterion = nn.CrossEntropyLoss(
                 weight=hparams['loss_class_weights'])
 
-        self.f1_score_train = MulticlassF1Score(num_classes=hparams["n_classes"],
-                                                average='macro')
-        self.f1_score_val = MulticlassF1Score(num_classes=hparams["n_classes"],
-                                              average='macro')
-        
-
     def forward(self, x_pet, x_mri):
         """
         Forward pass of the convolutional neural network. Should not be called
@@ -89,24 +77,6 @@ class Anat_PET_CNN(pl.LightningModule):
         out = self.model_fuse(out)
         return out
 
-    @property
-    def is_cuda(self):
-        """
-        Check if model parameters are allocated on the GPU.
-        """
-        return next(self.parameters()).is_cuda
-
-    def save(self, path):
-        """
-        Save model with its parameters to the given path. Conventionally the
-        path should end with "*.model".
-
-        Inputs:
-        - path: path string
-        """
-        print('Saving model... %s' % path)
-        torch.save(self, path)
-
     def general_step(self, batch, batch_idx, mode):
         x_pet = batch['pet1451']
         x_mri = batch['mri']
@@ -126,12 +96,6 @@ class Anat_PET_CNN(pl.LightningModule):
             self.f1_score_train(y_hat, y)
         return {'loss': loss, 'outputs': y_hat, 'labels': y}
 
-    def training_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "train")
-
-    def validation_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "val")
-
     def configure_optimizers(self):
         parameters_optim = []
         # if we only want to optimize the parameters of the fusion model
@@ -147,13 +111,13 @@ class Anat_PET_CNN(pl.LightningModule):
         if self.hparams['lr_pretrained']:
             for name, param in self.model_pet.named_parameters():
                 parameters_optim.append({
-                'params': param,
-                'lr': self.hparams['lr_pretrained']})
+                    'params': param,
+                    'lr': self.hparams['lr_pretrained']})
             for name, param in self.model_mri.named_parameters():
                 parameters_optim.append({
-                'params': param,
-                'lr': self.hparams['lr_pretrained']})
-        
+                    'params': param,
+                    'lr': self.hparams['lr_pretrained']})
+
         # pass parameters of fusion and reduce-dim network to optimizer
         optimizer = torch.optim.Adam(parameters_optim,
                                      weight_decay=self.hparams['l2_reg'])
@@ -166,39 +130,3 @@ class Anat_PET_CNN(pl.LightningModule):
                     "monitor": "val_loss_epoch"}
         else:
             return optimizer
-
-    def training_epoch_end(self, training_step_outputs):
-        avg_loss = torch.stack([x['loss']
-                               for x in training_step_outputs]).mean()
-        # F1 score
-        f1_epoch = self.f1_score_train.compute()
-        self.f1_score_train.reset()
-        # additional logging stuff
-        self.log_dict({
-            'train_loss_epoch': avg_loss,
-            'train_f1_epoch': f1_epoch,
-            'step': float(self.current_epoch)
-        })
-        # confusion matrix
-        im = generate_loggable_confusion_matrix(training_step_outputs,
-                                                self.label_ind_by_names)
-        self.logger.experiment.add_image(
-            "train_confusion_matrix", im, global_step=self.current_epoch)
-
-    def validation_epoch_end(self, validation_step_outputs):
-        avg_loss = torch.stack([x['loss']
-                               for x in validation_step_outputs]).mean()
-        # F1 score
-        f1_epoch = self.f1_score_val.compute()
-        self.f1_score_val.reset()
-        # additional logging stuff
-        self.log_dict({
-            'val_loss_epoch': avg_loss,
-            'val_f1_epoch': f1_epoch,
-            'step': float(self.current_epoch)
-        })
-        # confusion matrix
-        im = generate_loggable_confusion_matrix(validation_step_outputs,
-                                                self.label_ind_by_names)
-        self.logger.experiment.add_image(
-            "val_confusion_matrix", im, global_step=self.current_epoch)

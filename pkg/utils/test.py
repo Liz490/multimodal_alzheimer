@@ -1,44 +1,23 @@
 from torch.utils.data import DataLoader
-from pathlib import Path
 import pytorch_lightning as pl
-from typing import Callable
+from pkg.utils.dataloader import MultiModalDataset
 
 
-def test(init_dataset_and_model: Callable,
-         checkpoint_path: Path,
-         hparams: dict):
+def test(testset: MultiModalDataset,
+         model: pl.LightningModule,
+         experiment_name: str) -> None:
     """
     Test a model on the test set. Logs results to tensorboard under
     the name of the checkpoints parent directory. I.e.
     lightning_logs/test_set_<name of checkpoint parent directory>.
 
     Args:
-        init_dataset_and_model (Callable): Function that returns a testset and
-            a model. The function should take the following arguments:
-                binary_classification (bool): Whether the model is a binary
-                    classification model.
-                hparams (dict): Hyperparameters of the models dataloader.
-                test_csv_path (Path): Path to the csv file containing the test
-                    set paths and labels.
-                checkpoint_path (Path): Path to the checkpoint of the model.
-        checkpoint_path (Path): Path to the checkpoint of the model.
-        hparams (dict): Hyperparameters of the models dataloader.
+        testset (MultiModalDataset): Test set.
+        model (pl.LightningModule): Hyperparameters of the models dataloader.
+        experiment_name (str): Name of the log directory.
     """
     pl.seed_everything(5, workers=True)
-    experiment_name = 'test_set_' + checkpoint_path.parents[1].name
-
-    assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
-    if hparams['n_classes'] == 2:
-        binary_classification = True
-    else:
-        binary_classification = False
-
-    test_csv_path = Path.cwd() / 'data/test_path_data_labels.csv'
-
-    testset, model = init_dataset_and_model(binary_classification,
-                                            hparams,
-                                            test_csv_path,
-                                            checkpoint_path)
+    hparams = model.hparams
 
     testloader = DataLoader(
         testset,

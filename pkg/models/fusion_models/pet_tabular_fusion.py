@@ -1,44 +1,21 @@
-from matplotlib.pyplot import axis
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
-from torchmetrics.classification import MulticlassF1Score, MulticlassConfusionMatrix
 from pkg.models.tabular_models.dl_approach import load_model
-import seaborn as sns
-import pandas as pd
-import io
-import matplotlib.pyplot as plt
-from PIL import Image
-import torchmetrics
-import torchvision
 from pkg.models.pet_models.pet_cnn import Small_PET_CNN
 from pkg.models.tabular_models.dl_approach import get_avg_activation
 
 from pkg.loss_functions.focalloss import FocalLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from pkg.models.base_model import Base_Model
 
 
-class IntHandler:
-    """
-    See https://stackoverflow.com/a/73388839
-    """
+TRAINPATH = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
 
-    def legend_artist(self, legend, orig_handle, fontsize, handlebox):
-        x0, y0 = handlebox.xdescent, handlebox.ydescent
-        text = plt.matplotlib.text.Text(x0, y0, str(orig_handle))
-        handlebox.add_artist(text)
-        return text
 
-TRAINPATH='/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
-class PET_TABULAR_CNN(pl.LightningModule):
+class PET_TABULAR_CNN(Base_Model):
 
     def __init__(self, hparams, path_pet=None):
-        super().__init__()
-        self.save_hyperparameters(hparams)
-        if hparams["n_classes"] == 3:
-            self.label_ind_by_names = {'CN': 0, 'MCI': 1, 'AD': 2}
-        else:
-            self.label_ind_by_names = {'CN': 0, 'AD': 1}
+        super().__init__(hparams)
 
         # load checkpoints
         if path_pet:
@@ -88,9 +65,6 @@ class PET_TABULAR_CNN(pl.LightningModule):
             self.criterion = nn.CrossEntropyLoss(
                 weight=hparams['loss_class_weights'])
 
-        self.f1_score_train = MulticlassF1Score(num_classes=hparams["n_classes"], average='macro')
-        self.f1_score_val = MulticlassF1Score(num_classes=hparams["n_classes"], average='macro')
-
     def forward(self, x_pet, x_tabular):
         """
         Forward pass of the convolutional neural network. Should not be called
@@ -128,24 +102,6 @@ class PET_TABULAR_CNN(pl.LightningModule):
         out = self.model_fuse(out)
         return out
 
-    @property
-    def is_cuda(self):
-        """
-        Check if model parameters are allocated on the GPU.
-        """
-        return next(self.parameters()).is_cuda
-
-    def save(self, path):
-        """
-        Save model with its parameters to the given path. Conventionally the
-        path should end with "*.model".
-
-        Inputs:
-        - path: path string
-        """
-        print('Saving model... %s' % path)
-        torch.save(self, path)
-
     def general_step(self, batch, batch_idx, mode):
         x_pet = batch['pet1451']
         x_tabular = batch['tabular']
@@ -156,18 +112,7 @@ class PET_TABULAR_CNN(pl.LightningModule):
         y_hat = self(x_pet, x_tabular.unsqueeze(1).to(dtype=torch.float32)).to(dtype=torch.double)
         loss = self.criterion(y_hat, y)
         self.log(mode + '_loss', loss, on_step=True, prog_bar=True)
-        # compute F1
-        if mode == 'val':
-            self.f1_score_val(y_hat, y)
-        elif mode == 'train':
-            self.f1_score_train(y_hat, y)
         return {'loss': loss, 'outputs': y_hat, 'labels': y}
-
-    def training_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "train")
-
-    def validation_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "val")
 
     def configure_optimizers(self):
         parameters_optim = []
@@ -201,78 +146,3 @@ class PET_TABULAR_CNN(pl.LightningModule):
             return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss_epoch"}
         else:
             return optimizer
-
-    def training_epoch_end(self, training_step_outputs):
-        avg_loss = torch.stack([x['loss']
-                                for x in training_step_outputs]).mean()
-        # F1 score
-        f1_epoch = self.f1_score_train.compute()
-        self.f1_score_train.reset()
-        # additional logging stuff
-        self.log_dict({
-            'train_loss_epoch': avg_loss,
-            'train_f1_epoch': f1_epoch,
-            'step': float(self.current_epoch)
-        })
-        # confusion matrix
-        im_train = self.generate_confusion_matrix(training_step_outputs)
-        self.logger.experiment.add_image(
-            "train_confusion_matrix", im_train, global_step=self.current_epoch)
-
-    def validation_epoch_end(self, validation_step_outputs):
-        avg_loss = torch.stack([x['loss']
-                                for x in validation_step_outputs]).mean()
-        # F1 score
-        f1_epoch = self.f1_score_val.compute()
-        self.f1_score_val.reset()
-        # additional logging stuff
-        self.log_dict({
-            'val_loss_epoch': avg_loss,
-            'val_f1_epoch': f1_epoch,
-            'step': float(self.current_epoch)
-        })
-        # confusion matrix
-        im_val = self.generate_confusion_matrix(validation_step_outputs)
-        self.logger.experiment.add_image(
-            "val_confusion_matrix", im_val, global_step=self.current_epoch)
-
-    def generate_confusion_matrix(self, outs):
-        """
-        See https://stackoverflow.com/a/73388839
-        """
-        outputs = torch.cat([tmp['outputs'] for tmp in outs])
-        labels = torch.cat([tmp['labels'] for tmp in outs])
-
-        task = "binary" if self.hparams['n_classes'] == 2 else "multiclass"
-        confusion = torchmetrics.ConfusionMatrix(task=task,
-                                                 num_classes=self.hparams["n_classes"]).to(outputs.get_device())
-        outputs = torch.max(outputs, dim=1)[1]
-        confusion(outputs, labels)
-        computed_confusion = confusion.compute().detach().cpu().numpy().astype(int)
-
-        # confusion matrix
-        df_cm = pd.DataFrame(
-            computed_confusion,
-            index=self.label_ind_by_names.values(),
-            columns=self.label_ind_by_names.values(),
-        )
-
-        fig, ax = plt.subplots(figsize=(10, 5))
-        fig.subplots_adjust(left=0.05, right=.65)
-        sns.set(font_scale=1.2)
-        sns.heatmap(df_cm, annot=True, annot_kws={
-            "size": 16}, fmt='d', ax=ax, cmap='crest')
-        ax.legend(
-            self.label_ind_by_names.values(),
-            self.label_ind_by_names.keys(),
-            handler_map={int: IntHandler()},
-            loc='upper left',
-            bbox_to_anchor=(1.2, 1)
-        )
-        buf = io.BytesIO()
-
-        plt.savefig(buf, format='jpeg', bbox_inches='tight')
-        plt.close('all')
-        buf.seek(0)
-        with Image.open(buf) as im:
-            return torchvision.transforms.ToTensor()(im)

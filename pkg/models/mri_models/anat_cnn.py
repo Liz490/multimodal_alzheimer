@@ -108,10 +108,6 @@ class Anat_CNN(Base_Model):
         loss = self.criterion(y_hat, y)
         if mode != 'pred':
             self.log(mode + '_loss', loss, on_step=True, prog_bar=True)
-        if mode == 'val':
-            self.f1_score_val(y_hat, y)
-        elif mode == 'train':
-            self.f1_score_train(y_hat, y)
         return {'loss': loss, 'outputs': y_hat, 'labels': y}
 
     def configure_optimizers(self):

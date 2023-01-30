@@ -62,7 +62,7 @@ class MultiModalDataset(Dataset):
     
     def __init__(self, 
                 path: str,
-                binary_classification: bool=False,
+                binary_classification: bool | int = False,
                 modalities: List[str]=['pet1451', 't1w', 'tabular'],
                 days_threshold: int=180,
                 transform_pet=None,
@@ -78,6 +78,12 @@ class MultiModalDataset(Dataset):
         
         # read the dataframe with all modalities
         self.entire_ds = pd.read_csv(path)
+
+        # handle ambigoues parameter
+        if binary_classification == 2:
+            binary_classification = True
+        elif binary_classification == 3:
+            binary_classification = False
 
         # remove MCI labels if desired
         self.binary_classification = binary_classification

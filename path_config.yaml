@@ -1,0 +1,19 @@
+relative:
+  log_directory: 'lightning_logs'
+  test_set_csv: data/test_path_data_labels.csv
+  train_set_csv: data/train_path_data_labels.csv
+  val_set_csv: data/val_path_data_labels.csv
+
+# Best baseline model checkpoints
+pet_cnn_2_class: '/data2/practical-wise2223/adni/adni_1/lightning_checkpoints/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt'
+mri_cnn_2_class: '/data2/practical-wise2223/adni/adni_1/lightning_checkpoints/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt'
+pet_cnn_3_class: '/u/home/eisln/adlm_adni/lightning_logs/pet_3_class_retrain_best/v204/checkpoints/epoch=28-step=28.ckpt'
+mri_cnn_3_class: '/u/home/eisln/adlm_adni/lightning_logs/optuna_mri_3_class/version_48/checkpoints/epoch=32-step=32.ckpt'
+
+# Best 2-stage model checkpoints
+pet_mri_2_class: '/data2/practical-wise2223/adni/adni_1/lightning_checkpoints/lightning_logs/best_runs/2stage_pet_mri_2_class/checkpoints/epoch=26-step=26.ckpt'
+pet_tab_2_class: '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/lightning_logs/optuna_pet_tabular_fusion_two_class/version_11/checkpoints/epoch=42-step=42.ckpt'
+mri_tab_2_class: '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/lightning_logs/tabular_mri_fusion_two_class/version_11/checkpoints/epoch=49-step=49.ckpt'
+pet_mri_3_class: '/u/home/eisln/adlm_adni/lightning_logs/best_pet_mri_3_class_unfrozen/v28/checkpoints/epoch=32-val_f1=0.685.ckpt'
+pet_tab_3_class: '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/lightning_logs/optuna_unfrozen_pet_tabular_fusion_two_class/version_30/checkpoints/epoch=11-val_f1=0.809.ckpt'
+mri_tab_3_class: '/u/home/eisln/adlm_adni/lightning_logs/best_runs/2stage_tabular_mri_3_class/checkpoints/epoch=21-val_f1=0.528.ckpt'

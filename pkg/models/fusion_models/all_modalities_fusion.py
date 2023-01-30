@@ -1,25 +1,17 @@
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
-from torchmetrics.classification import MulticlassF1Score
 from pkg.models.fusion_models.anat_pet_fusion import Anat_PET_CNN
 from pkg.models.fusion_models.tabular_mri_fusion import Tabular_MRT_Model
 from pkg.models.fusion_models.pet_tabular_fusion import PET_TABULAR_CNN
 
 from pkg.loss_functions.focalloss import FocalLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from pkg.utils.confusion_matrix import generate_loggable_confusion_matrix
+from pkg.models.base_model import Base_Model
 
 
-class All_Modalities_Fusion(pl.LightningModule):
-
+class All_Modalities_Fusion(Base_Model):
     def __init__(self, hparams):
-        super().__init__()
-        self.save_hyperparameters(hparams)
-        if hparams["n_classes"] == 3:
-            self.label_ind_by_names = {'CN': 0, 'MCI': 1, 'AD': 2}
-        else:
-            self.label_ind_by_names = {'CN': 0, 'AD': 1}
+        super().__init__(hparams)
 
         # load checkpoints
         self.model_anat_pet = Anat_PET_CNN.load_from_checkpoint(
@@ -70,11 +62,6 @@ class All_Modalities_Fusion(pl.LightningModule):
             self.criterion = nn.CrossEntropyLoss(
                 weight=hparams['loss_class_weights'])
 
-        self.f1_score_train = MulticlassF1Score(
-            num_classes=hparams["n_classes"], average='macro')
-        self.f1_score_val = MulticlassF1Score(
-            num_classes=hparams["n_classes"], average='macro')
-
     def forward(self, x_pet, x_mri, x_tab):
         """
         Forward pass of the convolutional neural network. Should not be called
@@ -89,24 +76,6 @@ class All_Modalities_Fusion(pl.LightningModule):
         out = torch.cat((out_anat_pet, out_anat_tab, out_pet_tab), dim=1)
         out = self.model_fuse(out)
         return out
-
-    @property
-    def is_cuda(self):
-        """
-        Check if model parameters are allocated on the GPU.
-        """
-        return next(self.parameters()).is_cuda
-
-    def save(self, path):
-        """
-        Save model with its parameters to the given path. Conventionally the
-        path should end with "*.model".
-
-        Inputs:
-        - path: path string
-        """
-        print('Saving model... %s' % path)
-        torch.save(self, path)
 
     def general_step(self, batch, batch_idx, mode):
         x_pet = batch['pet1451']
@@ -123,18 +92,7 @@ class All_Modalities_Fusion(pl.LightningModule):
         y_hat = self(x_pet, x_mri, x_tab).to(dtype=torch.double)
         loss = self.criterion(y_hat, y)
         self.log(mode + '_loss', loss, on_step=True, prog_bar=True)
-        # compute F1
-        if mode == 'val':
-            self.f1_score_val(y_hat, y)
-        elif mode == 'train':
-            self.f1_score_train(y_hat, y)
         return {'loss': loss, 'outputs': y_hat, 'labels': y}
-
-    def training_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "train")
-
-    def validation_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "val")
 
     def configure_optimizers(self):
         parameters_optim = []
@@ -176,39 +134,3 @@ class All_Modalities_Fusion(pl.LightningModule):
                     "monitor": "val_loss_epoch"}
         else:
             return optimizer
-
-    def training_epoch_end(self, training_step_outputs):
-        avg_loss = torch.stack([x['loss']
-                               for x in training_step_outputs]).mean()
-        # F1 score
-        f1_epoch = self.f1_score_train.compute()
-        self.f1_score_train.reset()
-        # additional logging stuff
-        self.log_dict({
-            'train_loss_epoch': avg_loss,
-            'train_f1_epoch': f1_epoch,
-            'step': float(self.current_epoch)
-        })
-        # confusion matrix
-        im = generate_loggable_confusion_matrix(training_step_outputs,
-                                                self.label_ind_by_names)
-        self.logger.experiment.add_image(
-            "train_confusion_matrix", im, global_step=self.current_epoch)
-
-    def validation_epoch_end(self, validation_step_outputs):
-        avg_loss = torch.stack([x['loss']
-                               for x in validation_step_outputs]).mean()
-        # F1 score
-        f1_epoch = self.f1_score_val.compute()
-        self.f1_score_val.reset()
-        # additional logging stuff
-        self.log_dict({
-            'val_loss_epoch': avg_loss,
-            'val_f1_epoch': f1_epoch,
-            'step': float(self.current_epoch)
-        })
-        # confusion matrix
-        im = generate_loggable_confusion_matrix(validation_step_outputs,
-                                                self.label_ind_by_names)
-        self.logger.experiment.add_image(
-            "val_confusion_matrix", im, global_step=self.current_epoch)

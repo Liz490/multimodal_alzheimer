@@ -56,10 +56,20 @@ class Base_Model(pl.LightningModule, ABC):
         pass
 
     def training_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "train")
+        step_output = self.general_step(batch, batch_idx, "train")
+        y_hat = step_output["outputs"]
+        y = step_output["labels"]
+        self.f1_score_train(y_hat, y)
+        self.f1_score_train_per_class(y_hat, y)
+        return step_output
 
     def validation_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "val")
+        step_output = self.general_step(batch, batch_idx, "val")
+        y_hat = step_output["outputs"]
+        y = step_output["labels"]
+        self.f1_score_val(y_hat, y)
+        self.f1_score_val_per_class(y_hat, y)
+        return step_output
 
     def test_step(self, batch, batch_idx):
         step_output = self.general_step(batch, batch_idx, "test")

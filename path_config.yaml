@@ -18,3 +18,6 @@ mri_tab_2_class: '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/lightn
 pet_mri_3_class: '/u/home/eisln/adlm_adni/lightning_logs/best_pet_mri_3_class_unfrozen/v28/checkpoints/epoch=32-val_f1=0.685.ckpt'
 pet_tab_3_class: '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/lightning_logs/optuna_unfrozen_pet_tabular_fusion_two_class/version_30/checkpoints/epoch=11-val_f1=0.809.ckpt'
 mri_tab_3_class: '/u/home/eisln/adlm_adni/lightning_logs/best_runs/2stage_tabular_mri_3_class/checkpoints/epoch=21-val_f1=0.528.ckpt'
+
+# Best 3-stage model checkpoints
+all_mod_2_class: '...'

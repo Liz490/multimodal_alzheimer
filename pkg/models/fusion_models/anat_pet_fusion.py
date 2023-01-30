@@ -89,11 +89,6 @@ class Anat_PET_CNN(Base_Model):
         y_hat = self(x_pet, x_mri).to(dtype=torch.double)
         loss = self.criterion(y_hat, y)
         self.log(mode + '_loss', loss, on_step=True, prog_bar=True)
-        # compute F1
-        if mode == 'val':
-            self.f1_score_val(y_hat, y)
-        elif mode == 'train':
-            self.f1_score_train(y_hat, y)
         return {'loss': loss, 'outputs': y_hat, 'labels': y}
 
     def configure_optimizers(self):

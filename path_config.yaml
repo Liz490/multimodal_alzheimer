@@ -1,3 +1,4 @@
+# relative to the root of the project
 relative:
   log_directory: 'lightning_logs'
   test_set_csv: data/test_path_data_labels.csv

@@ -35,7 +35,8 @@ class PET_TABULAR_CNN(Base_Model):
                                                                     ensemble_size=hparams["ensemble_size"])
 
         # Freeze weights in the stage-1 models
-        if not self.hparams['lr_pretrained']:
+        if ('lr_pretrained' not in hparams.keys()
+                or not self.hparams['lr_pretrained']):
             for name, param in self.model_pet.named_parameters():
                 param.requires_grad = False
             for param in self.model_tabular.model[2].parameters():

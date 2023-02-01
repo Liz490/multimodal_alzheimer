@@ -22,7 +22,8 @@ class Tabular_MRT_Model(Base_Model):
         self.model_tabular, self.tabular_training_size = load_model(TRAINPATH, hparams["n_classes"]==2, ensemble_size=hparams["ensemble_size"])
 
         # Freeze weights
-        if not self.hparams['lr_pretrained']:
+        if ('lr_pretrained' not in hparams.keys()
+                or not self.hparams['lr_pretrained']):
             for name, param in self.model_mri.named_parameters():
                 param.requires_grad = False
             for param in self.model_tabular.model[2].parameters():

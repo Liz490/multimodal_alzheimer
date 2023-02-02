@@ -26,7 +26,15 @@ def pet_model(checkpoint_path: Path):
 
 if __name__ == '__main__':
     paths = load_path_config()
+
+    # Two class
     model = pet_model(paths["pet_cnn_2_class"])
     testset = pet_testset(model.hparams, paths["test_set_csv"])
-    experiment_name = 'test_set_' + paths["pet_cnn_2_class"].parents[1].name
+    experiment_name = 'test_set_pet_cnn_2_class'
+    test(testset, model, experiment_name)
+
+    # Three class
+    model = pet_model(paths["pet_cnn_3_class"])
+    testset = pet_testset(model.hparams, paths["test_set_csv"])
+    experiment_name = 'test_set_pet_cnn_3_class'
     test(testset, model, experiment_name)

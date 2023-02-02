@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from pkg.models.fusion_models.all_modalities_fusion import All_Modalities_Fusion
 from pkg.models.mri_models.anat_cnn import Anat_CNN
 from pkg.models.pet_models.pet_cnn import Small_PET_CNN

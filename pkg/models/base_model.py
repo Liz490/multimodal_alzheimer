@@ -1,6 +1,7 @@
 import torch
 import pytorch_lightning as pl
 from torchmetrics.classification import MulticlassF1Score
+from torchmetrics.classification import MulticlassMatthewsCorrCoef
 from abc import ABC, abstractmethod
 import numpy as np
 
@@ -135,11 +136,6 @@ class Base_Model(pl.LightningModule, ABC):
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['loss'] for x in outputs]).mean()
 
-        # Bootstrap F1 score
-        y_hat = torch.cat([x['outputs'] for x in outputs])
-        y_labels = torch.cat([x['labels'] for x in outputs])
-        avg_perf, ci = self.f1_score_bootstrap(y_hat, y_labels)
-
         f1_epoch = self.f1_score_test.compute()
         f1_epoch_per_class = self.f1_score_test_per_class.compute()
         self.f1_score_test.reset()
@@ -148,12 +144,36 @@ class Base_Model(pl.LightningModule, ABC):
         log_dict = {
             'test_loss_epoch': avg_loss,
             'test_f1_epoch': f1_epoch,
-            'test_f1_epoch_boot': avg_perf,
-            'test_f1_epoch_ci': ci,
             'step': float(self.current_epoch)
         }
         for i in range(self.hparams["n_classes"]):
             log_dict[f"test_f1_epoch_class_{i}"] = f1_epoch_per_class[i]
+
+        y_hat = torch.cat([x['outputs'] for x in outputs])
+        y_labels = torch.cat([x['labels'] for x in outputs])
+
+        # Bootstrap F1 score
+        f1_score_bootstrap = MulticlassF1Score(
+            num_classes=self.hparams["n_classes"], average='macro')
+        avg_f1, ci_f1 = self.bootstrap_metric(
+            f1_score_bootstrap,
+            y_hat,
+            y_labels
+        )
+        log_dict['test_f1_epoch_boot'] = avg_f1
+        log_dict['test_f1_epoch_ci'] = ci_f1
+
+        # Bootstrap MCC
+        mcc_score_bootstrap = MulticlassMatthewsCorrCoef(
+            num_classes=self.hparams["n_classes"])
+        avg_mcc, ci_mcc = self.bootstrap_metric(
+            mcc_score_bootstrap,
+            y_hat,
+            y_labels
+        )
+        log_dict['test_mcc_epoch_boot'] = avg_mcc
+        log_dict['test_mcc_epoch_ci'] = ci_mcc
+
         self.log_dict(log_dict)
 
         im = generate_loggable_confusion_matrix(outputs,
@@ -161,10 +181,9 @@ class Base_Model(pl.LightningModule, ABC):
         self.logger.experiment.add_image(
             "test_confusion_matrix", im, global_step=self.current_epoch)
 
-    def f1_score_bootstrap(self, y_hat, y_labels, n_drawings=1000):
-        f1_score_bootstrap = MulticlassF1Score(
-            num_classes=self.hparams["n_classes"], average='macro').to(self.device)
-        f1_bootstrap = torch.zeros(n_drawings)
+    def bootstrap_metric(self, metric, y_hat, y_labels, n_drawings=1000):
+        metric.to(self.device)
+        metric_bootstrap_values = torch.zeros(n_drawings)
         n = len(y_hat)
         for i in range(n_drawings):
             # draw n with replacement from y_hat and y_labels
@@ -172,14 +191,14 @@ class Base_Model(pl.LightningModule, ABC):
             y_hat_sample = y_hat[random_mask]
             y_labels_sample = y_labels[random_mask]
 
-            f1_score_bootstrap(y_hat_sample, y_labels_sample)
-            f1_bootstrap[i] = f1_score_bootstrap.compute()
-            f1_score_bootstrap.reset()
+            metric(y_hat_sample, y_labels_sample)
+            metric_bootstrap_values[i] = metric.compute()
+            metric.reset()
 
         # here stderr is the standard deviation because
         # f1_bootstrap is not one sample but a sample of samples
-        avg_performance = torch.mean(f1_bootstrap)
-        stderr = torch.std(f1_bootstrap)
+        avg_performance = torch.mean(metric_bootstrap_values)
+        stderr = torch.std(metric_bootstrap_values)
         confidence_interval = 1.96 * stderr
 
         return avg_performance, confidence_interval

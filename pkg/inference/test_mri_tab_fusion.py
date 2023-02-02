@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from pkg.models.fusion_models.tabular_mri_fusion import Tabular_MRT_Model
 from pkg.models.mri_models.anat_cnn import Anat_CNN
 from pkg.utils.dataloader import MultiModalDataset

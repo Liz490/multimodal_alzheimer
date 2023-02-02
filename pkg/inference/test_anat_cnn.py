@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from pathlib import Path
 from pkg.models.mri_models.anat_cnn import Anat_CNN
 from pkg.utils.dataloader import MultiModalDataset

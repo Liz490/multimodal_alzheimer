@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from pathlib import Path
 from pkg.models.pet_models.pet_cnn import Small_PET_CNN
 from pkg.utils.dataloader import MultiModalDataset

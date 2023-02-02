@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from pkg.models.tabular_models.tabular_pl_wrapper import Tabular_Model
 from pkg.utils.dataloader import MultiModalDataset
 from pkg.utils.test import test

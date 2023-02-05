@@ -3,9 +3,9 @@ import pytorch_lightning as pl
 from torchmetrics.classification import MulticlassF1Score
 from torchmetrics.classification import MulticlassMatthewsCorrCoef
 from abc import ABC, abstractmethod
-import numpy as np
 
 from pkg.utils.confusion_matrix import generate_loggable_confusion_matrix
+from pkg.utils.confusion_matrix import generate_confusion_matrix
 
 
 class Base_Model(pl.LightningModule, ABC):
@@ -175,6 +175,42 @@ class Base_Model(pl.LightningModule, ABC):
         log_dict['test_mcc_epoch_ci'] = ci_mcc
 
         self.log_dict(log_dict)
+
+        fig = generate_confusion_matrix(
+            outputs,
+            self.label_ind_by_names,
+            legend=False
+        )
+        fig.savefig(
+            f"{self.logger.log_dir}/confusion_matrix.png",
+            dpi=300,
+            transparent=True
+        )
+
+        fig = generate_confusion_matrix(
+            outputs,
+            self.label_ind_by_names,
+            normalize=True,
+            legend=False
+        )
+        fig.savefig(
+            f"{self.logger.log_dir}/confusion_matrix_normalized.png",
+            dpi=300,
+            transparent=True
+        )
+
+        fig = generate_confusion_matrix(
+            outputs,
+            self.label_ind_by_names,
+            normalize=True,
+            legend=False,
+            colormap=True
+        )
+        fig.savefig(
+            f"{self.logger.log_dir}/confusion_matrix_color_branded.png",
+            dpi=300,
+            transparent=True
+        )
 
         im = generate_loggable_confusion_matrix(outputs,
                                                 self.label_ind_by_names)

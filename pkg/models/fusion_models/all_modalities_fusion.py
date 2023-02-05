@@ -31,7 +31,8 @@ class All_Modalities_Fusion(Base_Model):
         self.model_pet_tab.model_fuse = self.model_pet_tab.model_fuse[:-2]
 
         # Freeze weights in the stage-2 models
-        if not self.hparams['lr_pretrained']:
+        if ('lr_pretrained' not in hparams.keys()
+                or not self.hparams['lr_pretrained']):
             for _, param in self.model_anat_pet.reduce_dim_mri.named_parameters():
                 param.requires_grad = False
             for _, param in self.model_anat_pet.model_fuse.named_parameters():

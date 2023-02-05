@@ -81,7 +81,7 @@ def get_avg_activation(activations, num_ensemble, training_size):
         activ_ = activations[training_size:, i:i + 1, :]
         output = activ_ if output is None else output + activ_
     output = output / num_ensemble
-    output = torch.transpose(output, 0, 1).squeeze()
+    output = torch.transpose(output, 0, 1).squeeze(dim=0)
     return output
 
 if __name__ == '__main__':

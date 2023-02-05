@@ -1,9 +1,9 @@
 # relative to the root of the project
 relative:
   log_directory: 'lightning_logs'
-  test_set_csv: data/test_path_data_labels.csv
-  train_set_csv: data/train_path_data_labels.csv
-  val_set_csv: data/val_path_data_labels.csv
+  test_set_csv: 'data/test_path_data_labels.csv'
+  train_set_csv: 'data/train_path_data_labels.csv'
+  val_set_csv: 'data/val_path_data_labels.csv'
 
 # Best baseline model checkpoints
 pet_cnn_2_class: '/data2/practical-wise2223/adni/adni_1/lightning_checkpoints/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt'
@@ -20,4 +20,5 @@ pet_tab_3_class: '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/lightn
 mri_tab_3_class: '/u/home/eisln/adlm_adni/lightning_logs/best_runs/2stage_tabular_mri_3_class/checkpoints/epoch=21-val_f1=0.528.ckpt'
 
 # Best 3-stage model checkpoints
-all_mod_2_class: '...'
+all_mod_2_class: '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/lightning_logs/optuna_all_modalities_two_class/version_135/checkpoints/epoch=2-step=2.ckpt'
+all_mod_3_class: '/u/home/schmiere/Documents/Code /adlm_adni/lightning_logs/3-class-3-stage-frozen-2/version_40/checkpoints/epoch=22-val_f1=0.747.ckpt'

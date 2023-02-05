@@ -86,7 +86,7 @@ class PET_TABULAR_CNN(Base_Model):
 
         # Register forward hook
         handle = self.model_tabular.model[2].decoder[0].register_forward_hook(get_activations('dec'))
-        x_tabular = x_tabular.cpu().squeeze()
+        x_tabular = x_tabular.cpu().squeeze(dim=1)
 
         # Forward step for tabular data
         self.model_tabular.predict_proba(x_tabular, normalize_with_test=False)

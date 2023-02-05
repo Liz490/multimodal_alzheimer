@@ -291,8 +291,9 @@ if __name__ == '__main__':
         'linear_out': 64,
         'fl_gamma': 5,
         'reduce_factor_lr_schedule': 0.5,
+        'best_k_checkpoints': 5
     }
 
-    train(hparams, experiment_name='testruns', experiment_version='best_checkpoints_1')
+    train(hparams, experiment_name='testruns')
     # train(hparams)
     # TODO rerun with MCI samples

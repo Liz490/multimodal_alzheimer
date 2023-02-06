@@ -6,6 +6,7 @@ lightning_logs/
 kfold_checkpoints/
 .tensorboard-info/
 pkg/inference/confusion_matrices/
+.DS_Store
 
 
 # IDEs

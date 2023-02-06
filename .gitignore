@@ -7,6 +7,7 @@ kfold_checkpoints/
 .tensorboard-info/
 pkg/inference/confusion_matrices/
 plots_presentation/
+.DS_Store
 
 
 # IDEs

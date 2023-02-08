@@ -22,3 +22,9 @@ mri_tab_3_class: '/u/home/eisln/adlm_adni/lightning_logs/best_runs/2stage_tabula
 # Best 3-stage model checkpoints
 all_mod_2_class: '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/lightning_logs/optuna_all_modalities_two_class/version_135/checkpoints/epoch=2-step=2.ckpt'
 all_mod_3_class: '/u/home/schmiere/Documents/Code /adlm_adni/lightning_logs/3-class-3-stage-frozen-2/version_40/checkpoints/epoch=22-val_f1=0.747.ckpt'
+
+# Experiments
+early_fusion_same_norm_2_class: '/u/home/eisln/adlm_adni/lightning_logs/best_runs/early_fusion_2_class_same_normalization/checkpoints/epoch=198-val_f1=0.746.ckpt'
+early_fusion_different_norm_2_class: '/u/home/eisln/adlm_adni/lightning_logs/best_runs/early_fusion_2_class/checkpoints/epoch=89-step=89.ckpt'
+featuremap_fusion_maxout_2_class: '/u/home/eisln/adlm_adni/lightning_logs/best_runs/maxout_2_class_feature_map_fusion_v27/checkpoints/epoch=116-val_f1=0.802.ckpt'
+featuremap_fusion_concat_2_class: '/u/home/eisln/adlm_adni/lightning_logs/best_runs/concat_2_class_feature_map_fusion_v47/checkpoints/epoch=112-val_loss=0.245.ckpt'

@@ -13,7 +13,7 @@ from pkg.models.pet_models.train_pet_cnn import ValidationLossTracker
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
 LOG_DIRECTORY = 'lightning_logs'
-EXPERIMENT_NAME = 'tabular_mri_fusion_two_class'
+EXPERIMENT_NAME = 'tabular_mri_fusion_three_class_unfrozen'
 EXPERIMENT_VERSION = None
 
 
@@ -222,31 +222,47 @@ def optuna_optimization():
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    #optuna_optimization()
+    # optuna_optimization()
     #####################
 
     # fine-tune best run (version 56)
 
+    # hparams = {
+    #     'early_stopping_patience': 30,
+    #     'max_epochs': 300,
+    #     'norm_mean_train': 413.6510,
+    #     'norm_std_train': 918.5371,
+    #     'norm_mean_val': 418.4120,
+    #     'norm_std_val': 830.2466,
+    #     'n_classes': 2,
+    #     'lr': 0.0008678312514285887,
+    #     'batch_size': 32,
+    #     'fl_gamma': 5,
+    #     'ensemble_size': 4,
+    #     'l2_reg': 0,
+    #     'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
+    #     'reduce_factor_lr_schedule': 0.1,
+    #     'lr_pretrained': 0.00000005,
+    #     'best_k_checkpoints': 3
+    # }
+
     hparams = {
         'early_stopping_patience': 30,
         'max_epochs': 300,
-        'norm_mean_train': 413.6510,
-        'norm_std_train': 918.5371,
-        'norm_mean_val': 418.4120,
-        'norm_std_val': 830.2466,
-        'n_classes': 2,
-        'lr': 0.0008678312514285887,
+        'n_classes': 3,
+        'ensemble_size': 4,
+        'lr': 0.0004452241342850761,
         'batch_size': 32,
         'fl_gamma': 5,
         'ensemble_size': 4,
-        'l2_reg': 0,
-        'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
+        'l2_reg': 0.01,
         'reduce_factor_lr_schedule': 0.1,
-        'lr_pretrained': 0.00000005,
-        'best_k_checkpoints': 3
+        'lr_pretrained': 2.1503878118797146e-06,
+        'best_k_checkpoints': 3,
+        'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/optuna_mri_3_class/version_48/checkpoints/epoch=32-step=32.ckpt'
     }
 
     train_anat_tabular(hparams,
-                   experiment_name='best_runs',
-                   experiment_version='2stage_tabular_mri_2_class')
+                       experiment_name='best_runs',
+                       experiment_version='2stage_tabular_mri_3_class')
 

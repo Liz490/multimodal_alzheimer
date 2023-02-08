@@ -14,7 +14,7 @@ def pet_testset(hparams: dict,
                          'std': hparams['norm_std']}
 
     testset = MultiModalDataset(path=test_csv_path,
-                                modalities=['pet1451'],
+                                modalities=['pet1451', 't1w', 'tabular'],
                                 normalize_pet=normalization_pet,
                                 binary_classification=hparams['n_classes'])
 

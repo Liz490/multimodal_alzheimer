@@ -11,7 +11,7 @@ from pkg.utils.load_path_config import load_path_config
 def tab_testset(paths: dict, binary_classification: bool = True):
     testset = MultiModalDataset(
         path=paths['test_set_csv'],
-        modalities=['tabular'],
+        modalities=['pet1451', 't1w', 'tabular'],
         binary_classification=binary_classification)
     return testset
 

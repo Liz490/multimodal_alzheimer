@@ -17,7 +17,7 @@ def anat_pet_testset(paths: dict, binary_classification: bool = True):
         model_mri = Anat_CNN.load_from_checkpoint(paths['mri_cnn_3_class'])
     testset = MultiModalDataset(
         path=paths['test_set_csv'],
-        modalities=['pet1451', 't1w'],
+        modalities=['pet1451', 't1w', 'tabular'],
         normalize_mri={'per_scan_norm': 'min_max'},
         normalize_pet={
             'mean': model_pet.hparams['norm_mean'],

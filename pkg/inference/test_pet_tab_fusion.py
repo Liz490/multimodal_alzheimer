@@ -18,7 +18,7 @@ def pet_tab_testset(paths: dict, binary_classification: bool = True):
         )
     testset = MultiModalDataset(
         path=paths['test_set_csv'],
-        modalities=['pet1451', 'tabular'],
+        modalities=['pet1451', 't1w', 'tabular'],
         normalize_pet={
             'mean': model_pet.hparams['norm_mean'],
             'std': model_pet.hparams['norm_std']},

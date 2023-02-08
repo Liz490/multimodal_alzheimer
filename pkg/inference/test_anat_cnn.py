@@ -11,7 +11,7 @@ from pkg.utils.load_path_config import load_path_config
 def anat_testset(hparams: dict,
                  test_csv_path: Path):
     testset = MultiModalDataset(path=test_csv_path,
-                                modalities=['t1w'],
+                                modalities=['pet1451', 't1w', 'tabular'],
                                 normalize_mri={'per_scan_norm': 'min_max'},
                                 binary_classification=hparams['n_classes'],
                                 quantile=hparams['norm_percentile'])

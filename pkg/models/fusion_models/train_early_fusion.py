@@ -233,7 +233,7 @@ def optuna_optimization():
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    optuna_optimization()
+    # optuna_optimization()
     #####################
 
     # Experimental
@@ -276,31 +276,31 @@ if __name__ == '__main__':
 
     # }
 
-    # # Best two class same normalization v48:
-    # hparams = {
-    #     'early_stopping_patience': 30,
-    #     'max_epochs': 300,
-    #     'norm_mean': 0.5145,
-    #     'norm_std': 0.5383,
-    #     'lr': 0.0001611958444926788,
-    #     'batch_size': 64,
-    #     'conv_out': [8, 16, 32, 64],
-    #     'filter_size': [7, 5, 3, 3],
-    #     # 'batchnorm': False,
-    #     'n_classes': 2,
-    #     'linear_out': 64,
-    #     'dropout_dense': 0.31202515127640107,
-    #     'fl_gamma': 2,
-    #     'batchnorm': False,
-    #     'reduce_factor_lr_schedule': 0.1,
-    #     'norm_percentile': 0.98,
-    #     'best_k_checkpoints': 3,
-    #     'dropout_conv_p': 0.11658522929249002,
+    # Best two class same normalization v48:
+    hparams = {
+        'early_stopping_patience': 30,
+        'max_epochs': 300,
+        'norm_mean': 0.5145,
+        'norm_std': 0.5383,
+        'lr': 0.0001611958444926788,
+        'batch_size': 64,
+        'conv_out': [8, 16, 32, 64],
+        'filter_size': [7, 5, 3, 3],
+        # 'batchnorm': False,
+        'n_classes': 2,
+        'linear_out': 64,
+        'dropout_dense': 0.31202515127640107,
+        'fl_gamma': 2,
+        'batchnorm': False,
+        'reduce_factor_lr_schedule': 0.1,
+        'norm_percentile': 0.98,
+        'best_k_checkpoints': 3,
+        'dropout_conv_p': 0.11658522929249002,
 
-    # }
+    }
 
     
 
-    # train(hparams, experiment_name='best_runs', experiment_version='early_fusion_2_class_same_normalization')
-    # # # train(hparams)
-    # # # TODO rerun with MCI samples
+    train(hparams, experiment_name='testruns', experiment_version='early_fusion_2_class_same_normalization')
+    # # train(hparams)
+    # # TODO rerun with MCI samples

@@ -15,22 +15,12 @@ import sys
 from pkg.loss_functions.focalloss import FocalLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-class IntHandler:
-    """
-    See https://stackoverflow.com/a/73388839
-    """
+from pkg.models.base_model import Base_Model
 
-    def legend_artist(self, legend, orig_handle, fontsize, handlebox):
-        x0, y0 = handlebox.xdescent, handlebox.ydescent
-        text = plt.matplotlib.text.Text(x0, y0, str(orig_handle))
-        handlebox.add_artist(text)
-        return text
-
-
-class PET_MRI_FMF(pl.LightningModule):
+class PET_MRI_FMF(Base_Model):
 
     def __init__(self, hparams, gpu_id=None):
-        super().__init__()
+        super().__init__(hparams, gpu_id=gpu_id)
         self.save_hyperparameters(hparams)
         if hparams["n_classes"] == 3:
             self.label_ind_by_names = {'CN': 0, 'MCI': 1, 'AD': 2}
@@ -151,24 +141,6 @@ class PET_MRI_FMF(pl.LightningModule):
         out = self.fuse_model(out_fused)
         return out
 
-    @property
-    def is_cuda(self):
-        """
-        Check if model parameters are allocated on the GPU.
-        """
-        return next(self.parameters()).is_cuda
-
-    def save(self, path):
-        """
-        Save model with its parameters to the given path. Conventionally the
-        path should end with "*.model".
-
-        Inputs:
-        - path: path string
-        """
-        print('Saving model... %s' % path)
-        torch.save(self, path)
-
     def general_step(self, batch, batch_idx, mode):
         x_pet = batch['pet1451']
         x_mri = batch['mri']
@@ -191,14 +163,6 @@ class PET_MRI_FMF(pl.LightningModule):
             self.f1_score_train_per_class(y_hat, y)
         return {'loss': loss, 'outputs': y_hat, 'labels': y}
 
-    def training_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "train")
-
-    def validation_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "val")
-
-    def predict_step(self, batch, batch_idx):
-        return self.general_step(batch, batch_idx, "pred")
 
     def configure_optimizers(self):
         parameters_optim = []
@@ -225,91 +189,6 @@ class PET_MRI_FMF(pl.LightningModule):
             #return [optimizer], [scheduler]
         else:
             return optimizer
-
-    def training_epoch_end(self, training_step_outputs):
-        avg_loss = torch.stack([x['loss']
-                               for x in training_step_outputs]).mean()
-        f1_epoch = self.f1_score_train.compute()
-        f1_epoch_per_class = self.f1_score_train_per_class.compute()
-        self.f1_score_train.reset()
-        self.f1_score_train_per_class.reset()
-
-        log_dict = {
-            'train_loss_epoch': avg_loss,
-            'train_f1_epoch': f1_epoch,
-            'step': float(self.current_epoch)
-        }
-        for i in range(self.hparams["n_classes"]):
-            log_dict[f"train_f1_epoch_class_{i}"] = f1_epoch_per_class[i]
-        self.log_dict(log_dict)
-
-        im = self.generate_confusion_matrix(training_step_outputs)
-        self.logger.experiment.add_image(
-            "train_confusion_matrix", im, global_step=self.current_epoch)
-
-    def validation_epoch_end(self, validation_step_outputs):
-        avg_loss = torch.stack([x['loss']
-                               for x in validation_step_outputs]).mean()
-        f1_epoch = self.f1_score_val.compute()
-        f1_epoch_per_class = self.f1_score_val_per_class.compute()
-        self.f1_score_val.reset()
-        self.f1_score_val_per_class.reset()
-
-        # current_lr = optimizer.param_groups[0]['lr']
-        log_dict = {
-            'val_loss_epoch': avg_loss,
-            'val_f1_epoch': f1_epoch,
-            'step': float(self.current_epoch)
-        }
-        for i in range(self.hparams["n_classes"]):
-            log_dict[f"val_f1_epoch_class_{i}"] = f1_epoch_per_class[i]
-        self.log_dict(log_dict)
-
-        im = self.generate_confusion_matrix(validation_step_outputs)
-        self.logger.experiment.add_image(
-            "val_confusion_matrix", im, global_step=self.current_epoch)
-
-    def generate_confusion_matrix(self, outs):
-        """
-        See https://stackoverflow.com/a/73388839
-        """
-
-        outputs = torch.cat([tmp['outputs'] for tmp in outs])
-        labels = torch.cat([tmp['labels'] for tmp in outs])
-
-        confusion = torchmetrics.ConfusionMatrix(
-            num_classes=self.hparams["n_classes"]).to(outputs.get_device())
-        confusion(outputs, labels)
-        computed_confusion = confusion.compute().detach().cpu().numpy().astype(int)
-
-        # confusion matrix
-        df_cm = pd.DataFrame(
-            computed_confusion,
-            index=self.label_ind_by_names.values(),
-            columns=self.label_ind_by_names.values(),
-        )
-
-        fig, ax = plt.subplots(figsize=(10, 5))
-        fig.subplots_adjust(left=0.05, right=.65)
-        sns.set(font_scale=1.2)
-        sns.heatmap(df_cm, annot=True, annot_kws={
-                    "size": 16}, fmt='d', ax=ax, cmap='crest')
-        ax.legend(
-            self.label_ind_by_names.values(),
-            self.label_ind_by_names.keys(),
-            handler_map={int: IntHandler()},
-            loc='upper left',
-            bbox_to_anchor=(1.2, 1)
-        )
-        buf = io.BytesIO()
-
-        plt.savefig(buf, format='jpeg', bbox_inches='tight')
-        plt.close('all')
-        buf.seek(0)
-        with Image.open(buf) as im:
-            return torchvision.transforms.ToTensor()(im)
-
-
 class Random_Benchmark_All_CN(PET_MRI_FMF):
     def forward(self, x):
         y_hat = torch.zeros_like(super().forward(x))

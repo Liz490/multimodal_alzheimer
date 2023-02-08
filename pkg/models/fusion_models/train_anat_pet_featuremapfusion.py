@@ -255,7 +255,7 @@ def optuna_optimization():
 if __name__ == '__main__':
     #####################
     # Uncomment and comment the rest for optuna optimization
-    optuna_optimization()
+    # optuna_optimization()
     #####################
 
     # Experimental
@@ -303,38 +303,38 @@ if __name__ == '__main__':
 
     # }
 
-    # # Best two class maxout v27:
-    # hparams = {
-    #     'early_stopping_patience': 30,
-    #     'max_epochs': 300,
-    #     'norm_mean': 0.5145,
-    #     'norm_std': 0.5383,
-    #     'lr': 0.00020495402328039346,
-    #     'batch_size': 64,
-    #     'conv_out': [16, 32, 64],
-    #     'filter_size': [5, 5, 5],
-    #     'filter_size_fusion': 5,
-    #     'n_classes': 2,
-    #     'linear_out': 64,
-    #     'fl_gamma': 5,
-    #     'batchnorm': False,
-    #     'batchnorm_fusion': False,
-    #     'reduce_factor_lr_schedule': 0.1,
-    #     'norm_percentile': 0.95,
-    #     'best_k_checkpoints': 3,
-    #     'fusion_mode': 'maxout',
-    #     'l2_reg': 0,
-    #     'n_layers_fusion': 1,
-    #     'n_out_fusion': 64,
-    #     'dropout_conv_p': 0.17474488076276287,
-    #     'dropout_dense': 0.37401418387718594
+    # Best two class maxout v27:
+    hparams = {
+        'early_stopping_patience': 30,
+        'max_epochs': 300,
+        'norm_mean': 0.5145,
+        'norm_std': 0.5383,
+        'lr': 0.00020495402328039346,
+        'batch_size': 64,
+        'conv_out': [16, 32, 64],
+        'filter_size': [5, 5, 5],
+        'filter_size_fusion': 5,
+        'n_classes': 2,
+        'linear_out': 64,
+        'fl_gamma': 5,
+        'batchnorm': False,
+        'batchnorm_fusion': False,
+        'reduce_factor_lr_schedule': 0.1,
+        'norm_percentile': 0.95,
+        'best_k_checkpoints': 3,
+        'fusion_mode': 'maxout',
+        'l2_reg': 0,
+        'n_layers_fusion': 1,
+        'n_out_fusion': 64,
+        'dropout_conv_p': 0.17474488076276287,
+        'dropout_dense': 0.37401418387718594
 
-    # }
+    }
 
 
 
     
 
-    # train(hparams, experiment_name='best_runs', experiment_version='maxout_2_class_feature_map_fusion_v27')
-    # # # train(hparams)
-    # # # TODO rerun with MCI samples
+    train(hparams, experiment_name='testruns', experiment_version='maxout_2_class_feature_map_fusion_v27')
+    # # train(hparams)
+    # # TODO rerun with MCI samples

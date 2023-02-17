@@ -28,8 +28,7 @@ class PET_MRI_EF(Base_Model):
 
         modules = nn.ModuleList()
 
-        # Convolutional Block
-        # n * (Conv, [Batchnorm], Activation, [Dropout], MaxPool)
+        
         # we need two input channels - one for PET and one for MRI
         n_in = 2
         for n_out, filter_size in zip(self.hparams["conv_out"],
@@ -43,12 +42,11 @@ class PET_MRI_EF(Base_Model):
                 modules.append(nn.Dropout(p=self.hparams["dropout_conv_p"]))
             n_in = n_out
 
-        # Connector Block
+        # GAP and flatten before FC layers
         modules.append(nn.AdaptiveAvgPool3d(1))
         modules.append(nn.Flatten())
 
         # Dense Block
-        # n * ([Dropout], Linear)
         if "linear_out" in self.hparams and self.hparams["linear_out"]:
             n_out = self.hparams["linear_out"]
             if "dropout_dense_p" in self.hparams:
@@ -60,14 +58,11 @@ class PET_MRI_EF(Base_Model):
 
         self.model = nn.Sequential(*modules)
 
-        if 'fl_gamma' in hparams and hparams['fl_gamma']:
-            self.criterion = FocalLoss(gamma=self.hparams['fl_gamma'])
-        else:
-            self.criterion = nn.CrossEntropyLoss(
-                weight=hparams['loss_class_weights'])
-
+        # loss function to tackle imbalance
         self.criterion = nn.CrossEntropyLoss(
             weight=hparams['loss_class_weights'])
+
+
         self.f1_score_train = MulticlassF1Score(
             num_classes=self.hparams["n_classes"], average='macro')
         self.f1_score_train_per_class = MulticlassF1Score(
@@ -112,7 +107,6 @@ class PET_MRI_EF(Base_Model):
         if self.hparams['reduce_factor_lr_schedule']:
             scheduler = ReduceLROnPlateau(optimizer, factor=self.hparams['reduce_factor_lr_schedule'])
             return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss_epoch"}
-            #return [optimizer], [scheduler]
         else:
             return optimizer
 

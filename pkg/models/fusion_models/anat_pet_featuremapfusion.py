@@ -27,16 +27,13 @@ class PET_MRI_FMF(Base_Model):
         else:
             self.label_ind_by_names = {'CN': 0, 'AD': 1}
         
+        # 2 options: concatenate the intermediate volumes or take the voxel-wise maximum
         assert hparams['fusion_mode'] == 'concatenate' or hparams['fusion_mode'] == 'maxout'
         self.fusion_mode = hparams['fusion_mode']
 
         modules_pet = nn.ModuleList()
         modules_mri = nn.ModuleList()
         modules_fused = nn.ModuleList()
-
-        # Convolutional Block
-        # n * (Conv, [Batchnorm], Activation, [Dropout], MaxPool)
-        # we need two input channels - one for PET and one for MRI
 
         #PET
         n_in = 1
@@ -69,8 +66,7 @@ class PET_MRI_FMF(Base_Model):
 
         # model that processes the fused feature map
         if hparams['fusion_mode'] == 'concatenate':
-            n_in_fusion = 2*n_in
-            #modules_fused.append(nn.Conv3d(n_in, 2*n_in, filter_size, padding="same"))
+            n_in_fusion = 2 * n_in
         else:
             n_in_fusion = n_in
         
@@ -80,20 +76,13 @@ class PET_MRI_FMF(Base_Model):
                 modules_fused.append(nn.BatchNorm3d(hparams["n_out_fusion"]))
             modules_fused.append(nn.ReLU())
             modules_fused.append(nn.MaxPool3d(2))
-            # if "dropout_conv_p" in self.hparams:
-            #     modules.append(nn.Dropout(p=self.hparams["dropout_conv_p"]))
-            # n_in = n_out
             n_in_fusion = n_in_fusion * 2
-
 
         # Connector Block
         modules_fused.append(nn.AdaptiveAvgPool3d(1))
         modules_fused.append(nn.Flatten())
 
         # Dense Block
-        # n * ([Dropout], Linear)
-        # if "linear_out" in self.hparams and self.hparams["linear_out"]:
-        # n_out = self.hparams["linear_out"]
         if "dropout_dense_p" in self.hparams:
             modules_fused.append(
                 nn.Dropout(p=self.hparams["dropout_dense_p"]))
@@ -102,12 +91,6 @@ class PET_MRI_FMF(Base_Model):
         modules_fused.append(nn.Linear(64, self.hparams["n_classes"]))
 
         self.fuse_model = nn.Sequential(*modules_fused)
-
-        if 'fl_gamma' in hparams and hparams['fl_gamma']:
-            self.criterion = FocalLoss(gamma=self.hparams['fl_gamma'])
-        else:
-            self.criterion = nn.CrossEntropyLoss(
-                weight=hparams['loss_class_weights'])
 
         self.criterion = nn.CrossEntropyLoss(
             weight=hparams['loss_class_weights'])
@@ -147,7 +130,6 @@ class PET_MRI_FMF(Base_Model):
         y = batch['label']
         x_pet = x_pet.unsqueeze(1)
         x_mri = x_mri.unsqueeze(1)
-        # x = torch.stack((x_pet, x_mri), dim=1)
         x_pet = x_pet.to(dtype=torch.float32)
         x_mri = x_mri.to(dtype=torch.float32)
         y_hat = self.forward(x_pet=x_pet, x_mri=x_mri).to(dtype=torch.double)
@@ -186,7 +168,6 @@ class PET_MRI_FMF(Base_Model):
         if self.hparams['reduce_factor_lr_schedule']:
             scheduler = ReduceLROnPlateau(optimizer, factor=self.hparams['reduce_factor_lr_schedule'])
             return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss_epoch"}
-            #return [optimizer], [scheduler]
         else:
             return optimizer
 class Random_Benchmark_All_CN(PET_MRI_FMF):

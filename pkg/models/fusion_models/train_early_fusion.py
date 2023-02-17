@@ -131,13 +131,6 @@ def train(hparams,
 
     # CALLBACKS
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
-    # checkpoint_callback = ModelCheckpoint(
-    # save_top_k=1,
-    # monitor="val_f1_epoch",
-    # mode="max",
-    # dirpath=experiment_name,
-    # filename="best-run-{epoch:02d}-{val_f1_epoch:.4f}",
-# )
 
     # TRANSFORMS
     normalization_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']}
@@ -157,14 +150,14 @@ def train(hparams,
     trainset = MultiModalDataset(
         path=trainpath, 
         modalities=['pet1451', 't1w'], 
-        normalize_mri=normalization_mri, #{'per_scan_norm': 'min_max'},
+        normalize_mri=normalization_mri, # {'per_scan_norm': 'min_max'},
         normalize_pet={'mean': hparams['norm_mean'], 'std': hparams['norm_std']},
         binary_classification=binary_classification, 
         quantile=hparams['norm_percentile'])
     valset = MultiModalDataset(
         path=valpath, 
         modalities=['pet1451', 't1w'], 
-        normalize_mri=normalization_mri, #normalization_mri,
+        normalize_mri=normalization_mri, 
         normalize_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']},
         binary_classification=binary_classification, 
         quantile=hparams['norm_percentile'])
@@ -186,7 +179,6 @@ def train(hparams,
     hparams['loss_class_weights'] = 1 - weight_normalized
     hparams['loss_class_weights_human_readable'] = hparams['loss_class_weights'].tolist()  # original hparam is a Tensor that isn't stored in human readable format
 
-    # model = Random_Benchmark(hparams=hparams)
     model = PET_MRI_EF(hparams=hparams)
 
     tb_logger = pl.loggers.TensorBoardLogger(
@@ -236,46 +228,6 @@ if __name__ == '__main__':
     # optuna_optimization()
     #####################
 
-    # Experimental
-    # hparams = {
-    #     'early_stopping_patience': 5,
-    #     'max_epochs': 20,
-    #     'norm_mean': 0.5145,
-    #     'norm_std': 0.5383
-    # }
-
-    # hparams['lr'] = 0.00006
-    # hparams['batch_size'] = 8
-    # hparams['conv_out'] = [8, 16, 32, 64]
-    # hparams['filter_size'] = [5, 5, 5, 3]  # More filters for more layers!
-    # hparams['batchnorm'] = True
-    # # hparams['dropout_conv_p'] = 0.1
-    # # hparams['dropout_dense_p'] = 0.5
-    # hparams['linear_out'] = 64
-    # hparams["n_classes"] = 2
-
-
-    # Best two class v26:
-    # hparams = {
-    #     'early_stopping_patience': 30,
-    #     'max_epochs': 300,
-    #     'norm_mean': 0.5145,
-    #     'norm_std': 0.5383,
-    #     'lr': 1.92419735361303e-05,
-    #     'batch_size': 64,
-    #     'conv_out': [16, 32, 64, 128],
-    #     'filter_size': [3, 3, 3, 3],
-    #     # 'batchnorm': False,
-    #     'n_classes': 2,
-    #     'linear_out': 64,
-    #     'dropout_dense': 0.3188563832255344,
-    #     'fl_gamma': 5,
-    #     'batchnorm': True,
-    #     'reduce_factor_lr_schedule': 0.1,
-    #     'norm_percentile': 0.98
-
-    # }
-
     # Best two class same normalization v48:
     hparams = {
         'early_stopping_patience': 30,
@@ -302,5 +254,4 @@ if __name__ == '__main__':
     
 
     train(hparams, experiment_name='testruns', experiment_version='early_fusion_2_class_same_normalization')
-    # # train(hparams)
-    # # TODO rerun with MCI samples
+

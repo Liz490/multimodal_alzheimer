@@ -151,13 +151,6 @@ def train(hparams,
 
     # CALLBACKS
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
-    # checkpoint_callback = ModelCheckpoint(
-    # save_top_k=1,
-    # monitor="val_f1_epoch",
-    # mode="max",
-    # dirpath=experiment_name,
-    # filename="best-run-{epoch:02d}-{val_f1_epoch:.4f}",
-# )
 
     # TRANSFORMS
     normalization_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']}
@@ -258,25 +251,6 @@ if __name__ == '__main__':
     # optuna_optimization()
     #####################
 
-    # Experimental
-    # hparams = {
-    #     'early_stopping_patience': 5,
-    #     'max_epochs': 20,
-    #     'norm_mean': 0.5145,
-    #     'norm_std': 0.5383
-    # }
-
-    # hparams['lr'] = 0.00006
-    # hparams['batch_size'] = 8
-    # hparams['conv_out'] = [8, 16, 32, 64]
-    # hparams['filter_size'] = [5, 5, 5, 3]  # More filters for more layers!
-    # hparams['batchnorm'] = True
-    # # hparams['dropout_conv_p'] = 0.1
-    # # hparams['dropout_dense_p'] = 0.5
-    # hparams['linear_out'] = 64
-    # hparams["n_classes"] = 2
-
-
     # # Best two class concatenate v47:
     # hparams = {
     #     'early_stopping_patience': 30,
@@ -331,10 +305,6 @@ if __name__ == '__main__':
 
     }
 
-
-
     
-
     train(hparams, experiment_name='testruns', experiment_version='maxout_2_class_feature_map_fusion_v27')
-    # # train(hparams)
-    # # TODO rerun with MCI samples
+

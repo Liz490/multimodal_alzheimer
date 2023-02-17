@@ -120,7 +120,8 @@ due to wrong path configuration.
 Make sure to delete cell outputs in jupyter notebooks before staging/committing.
 
 ## Project setup
-Generate train/val/test path indices (csv files containing path to data and labels) with `python pkg/utils/create_csv/data_labels.py`
+- Set up path_config.yaml with paths to model checkpoints
+- Generate train/val/test path indices (csv files containing path to data and labels) with `python pkg/utils/create_csv/data_labels.py`
 
 ## Training
 Run `python pkg/models/<model_group>/train_<model>.py`. Results are logged to `lightning_logs` and can be visualized with tensorboard.

@@ -10,8 +10,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import math
 from pkg.models.pet_models.train_pet_cnn import ValidationLossTracker
-import sys
-from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
 # tensorboard and checkpoint logging
 LOG_DIRECTORY = 'lightning_logs'
@@ -89,7 +88,6 @@ def optuna_objective(trial):
     lr_pretrained_min = 1e-7
     lr_pretrained_max = 1e-5
     gamma_options = [None, 1, 2, 5]
-    
 
     # Let optuna select hyperparameters based on options defined above
     hparams['lr'] = trial.suggest_float('lr', lr_min, lr_max, log=True)
@@ -145,28 +143,31 @@ def train_anat_pet(hparams, experiment_name='', experiment_version=None):
         model_pet = MODEL_PET_2_CLASS
         model_mri = MODEL_MRI_2_CLASS
     else:
-        binary_classification=False
+        binary_classification = False
         model_pet = MODEL_PET_3_CLASS
         model_mri = MODEL_MRI_3_CLASS
 
-    
     # Setup datasets and dataloaders
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
     trainset = MultiModalDataset(
-        path=trainpath, 
-        modalities=['pet1451', 't1w'], 
+        path=trainpath,
+        modalities=['pet1451', 't1w'],
         normalize_mri={'per_scan_norm': 'min_max'},
-        normalize_pet={'mean': model_pet.hparams['norm_mean'], 'std': model_pet.hparams['norm_std']},
-        binary_classification=binary_classification, 
+        normalize_pet={
+            'mean': model_pet.hparams['norm_mean'],
+            'std': model_pet.hparams['norm_std']},
+        binary_classification=binary_classification,
         quantile=model_mri.hparams['norm_percentile'])
     valset = MultiModalDataset(
-        path=valpath, 
-        modalities=['pet1451', 't1w'], 
+        path=valpath,
+        modalities=['pet1451', 't1w'],
         normalize_mri={'per_scan_norm': 'min_max'},
-        normalize_pet = {'mean': model_pet.hparams['norm_mean'], 'std': model_pet.hparams['norm_std']},
-        binary_classification=binary_classification, 
+        normalize_pet={
+            'mean': model_pet.hparams['norm_mean'],
+            'std': model_pet.hparams['norm_std']},
+        binary_classification=binary_classification,
         quantile=model_mri.hparams['norm_percentile'])
 
     trainloader = DataLoader(
@@ -215,10 +216,10 @@ def train_anat_pet(hparams, experiment_name='', experiment_version=None):
                             filename='epoch={epoch}-val_loss={val_loss_epoch:.3f}',
                             auto_insert_metric_name=False),
             ModelCheckpoint(monitor='val_f1_epoch',
-                        save_top_k=hparams['best_k_checkpoints'],
-                        mode='max',
-                        filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
-                        auto_insert_metric_name=False)
+                            save_top_k=hparams['best_k_checkpoints'],
+                            mode='max',
+                            filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
+                            auto_insert_metric_name=False)
         ]
     )
 
@@ -237,31 +238,10 @@ def optuna_optimization():
 
 if __name__ == '__main__':
     #####################
-    # Uncomment and comment the rest for optuna optimization
-    # optuna_optimization()
+    # Comment and uncomment the rest for single run with specified hyperparameters.
+    optuna_optimization()
     #####################
 
-    # # fine-tune best run 2 class (version 56)
-    # hparams = {
-    #     'early_stopping_patience': 30,
-    #     'max_epochs': 300,
-    #     'norm_mean_train': 413.6510,
-    #     'norm_std_train': 918.5371,
-    #     'norm_mean_val': 418.4120,
-    #     'norm_std_val': 830.2466,
-    #     'n_classes': 2,
-    #     'lr': 0.0008678312514285887,
-    #     'batch_size': 32,
-    #     'fl_gamma': 5,
-    #     'l2_reg': 0,
-    #     # 'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt',
-    #     # 'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt',
-    #     'reduce_factor_lr_schedule': 0.1,
-    #     'lr_pretrained': None,
-    #     'best_k_checkpoints': 3
-    # }
-
-    # # fine-tune best run 3 class (version 26)
     # hparams = {
     #     'early_stopping_patience': 30,
     #     'max_epochs': 300,
@@ -270,48 +250,21 @@ if __name__ == '__main__':
     #     'norm_mean_val': 418.4120,
     #     'norm_std_val': 830.2466,
     #     'n_classes': 3,
-    #     'lr': 2.56472539625866e-05,
+    #     'lr': 2.6121710797334304e-05,
     #     'batch_size': 64,
     #     'fl_gamma': 1,
-    #     'l2_reg': 0,
-    #     # 'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/optuna_mri_3_class/version_48/checkpoints/epoch=32-step=32.ckpt',
-    #     # 'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/pet_3_class_retrain_best/v204/checkpoints/epoch=28-step=28.ckpt',
+    #     'l2_reg': 0.001,
     #     'reduce_factor_lr_schedule': 0.1,
     #     'norm_percentile': 0.95,
-    #     'lr_pretrained': None,
+    #     'lr_pretrained': 2.1490997404925147e-06,
     #     'best_k_checkpoints': 3
     # }
 
-    # # fine-tune best run 3 class UNFROZEN (version 28)
-    hparams = {
-        'early_stopping_patience': 30,
-        'max_epochs': 300,
-        'norm_mean_train': 413.6510,
-        'norm_std_train': 918.5371,
-        'norm_mean_val': 418.4120,
-        'norm_std_val': 830.2466,
-        'n_classes': 3,
-        'lr': 2.6121710797334304e-05,
-        'batch_size': 64,
-        'fl_gamma': 1,
-        'l2_reg': 0.001,
-        # 'path_mri': '/u/home/eisln/adlm_adni/lightning_logs/optuna_mri_3_class/version_48/checkpoints/epoch=32-step=32.ckpt',
-        # 'path_pet': '/u/home/eisln/adlm_adni/lightning_logs/pet_3_class_retrain_best/v204/checkpoints/epoch=28-step=28.ckpt',
-        'reduce_factor_lr_schedule': 0.1,
-        'norm_percentile': 0.95,
-        'lr_pretrained': 2.1490997404925147e-06,
-        'best_k_checkpoints': 3
-    }
+    # if hparams['n_classes'] == 2:
+    #     hparams['path_pet'] = PATH_PET_CNN_2_CLASS
+    #     hparams['path_mri'] = PATH_MRI_CNN_2_CLASS
+    # else:
+    #     hparams['path_pet'] = PATH_PET_CNN_3_CLASS
+    #     hparams['path_mri'] = PATH_MRI_CNN_3_CLASS
 
-    if hparams['n_classes'] == 2:
-        hparams['path_pet'] = PATH_PET_CNN_2_CLASS
-        hparams['path_mri'] = PATH_MRI_CNN_2_CLASS
-    else:
-        hparams['path_pet'] = PATH_PET_CNN_3_CLASS
-        hparams['path_mri'] = PATH_MRI_CNN_3_CLASS
-
-    train_anat_pet(hparams, 
-                # model_pet=MODEL_PET,
-                # model_mri=MODEL_MRI,
-                experiment_name='best_pet_mri_3_class_frozen', #'best_pet_mri_3_class'
-                experiment_version='v28') # 2stage_pet_mri_2_class
+    # train_anat_pet(hparams)

@@ -50,8 +50,6 @@ class Small_PET_CNN(Base_Model):
             self.criterion = nn.CrossEntropyLoss(
                 weight=hparams['loss_class_weights'])
 
-        # TODO Error here, remove criterion resetting and retrain everything
-        #  with focal loss
         self.criterion = nn.CrossEntropyLoss(
             weight=hparams['loss_class_weights'])
 

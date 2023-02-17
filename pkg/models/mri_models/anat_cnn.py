@@ -11,7 +11,6 @@ from pkg.models.base_model import Base_Model
 
 
 class Anat_CNN(Base_Model):
-
     def __init__(self, hparams, gpu_id=None):
         super().__init__(hparams)
 
@@ -84,7 +83,6 @@ class Anat_CNN(Base_Model):
         else:
             self.criterion = nn.CrossEntropyLoss(
                 weight=hparams['loss_class_weights'])
-
 
     def forward(self, x):
         """

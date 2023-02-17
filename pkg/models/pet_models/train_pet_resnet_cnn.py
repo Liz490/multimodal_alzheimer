@@ -6,7 +6,7 @@ from pet_resnet_cnn import PET_CNN_ResNet
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint
 import math
 from train_pet_cnn import ValidationLossTracker
 
@@ -134,8 +134,8 @@ def optuna_objective(trial):
     # Train network
     try:
         val_loss = train_pet_resnet(hparams,
-                              experiment_name=EXPERIMENT_NAME,
-                              experiment_version=EXPERIMENT_VERSION)
+                                    experiment_name=EXPERIMENT_NAME,
+                                    experiment_version=EXPERIMENT_VERSION)
         return val_loss
     except torch.cuda.OutOfMemoryError:
         print("Aborting run, not enough memory!")
@@ -157,26 +157,29 @@ def train_pet_resnet(hparams, experiment_name='', experiment_version=None):
     pl.seed_everything(15, workers=True)
 
     # TRANSFORMS
-    normalization_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']}
+    normalization_pet = {
+        'mean': hparams['norm_mean'],
+        'std': hparams['norm_std']
+    }
 
     assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
     if hparams['n_classes'] == 2:
-        binary_classification=True
+        binary_classification = True
     else:
-        binary_classification=False
-    
+        binary_classification = False
+
     # Setup datasets and dataloaders
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
     trainset = MultiModalDataset(path=trainpath, 
-                                modalities=['pet1451'],
-                                normalize_pet=normalization_pet,
-                                binary_classification=binary_classification)
+                                 modalities=['pet1451'],
+                                 normalize_pet=normalization_pet,
+                                 binary_classification=binary_classification)
     valset = MultiModalDataset(path=valpath,
-                            modalities=['pet1451'],
-                            normalize_pet=normalization_pet,
-                            binary_classification=binary_classification)
+                               modalities=['pet1451'],
+                               normalize_pet=normalization_pet,
+                               binary_classification=binary_classification)
 
     trainloader = DataLoader(
         trainset,
@@ -223,10 +226,10 @@ def train_pet_resnet(hparams, experiment_name='', experiment_version=None):
                             filename='epoch={epoch}-val_loss={val_loss_epoch:.3f}',
                             auto_insert_metric_name=False),
             ModelCheckpoint(monitor='val_f1_epoch',
-                        save_top_k=hparams['best_k_checkpoints'],
-                        mode='max',
-                        filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
-                        auto_insert_metric_name=False)
+                            save_top_k=hparams['best_k_checkpoints'],
+                            mode='max',
+                            filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
+                            auto_insert_metric_name=False)
         ]
     )
 
@@ -245,7 +248,7 @@ def optuna_optimization():
 
 if __name__ == '__main__':
     #####################
-    # Uncomment and comment the rest for optuna optimization
+    # Comment and uncomment the rest for single run with specified hyperparameters
     optuna_optimization()
     #####################
 

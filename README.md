@@ -118,3 +118,12 @@ Run any (python-)scripts from the project root directory, otherwise you will get
 due to wrong path configuration.
 
 Make sure to delete cell outputs in jupyter notebooks before staging/committing.
+
+## Project setup
+Generate train/val/test path indices (csv files containing path to data and labels) with `python pkg/utils/create_csv/data_labels.py`
+
+## Training
+Run `python pkg/models/<model_group>/train_<model>.py`. Results are logged to `lightning_logs` and can be visualized with tensorboard.
+
+## Testing
+Run `python inference/test_<model>.py` or `python inference/run_all_tests.sh`. Results are logged to `lightning_logs` and can be visualized with tensorboard.

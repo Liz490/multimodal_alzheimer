@@ -118,7 +118,6 @@ class Base_Model(pl.LightningModule, ABC):
         self.f1_score_val.reset()
         self.f1_score_val_per_class.reset()
 
-        # current_lr = optimizer.param_groups[0]['lr']
         log_dict = {
             'val_loss_epoch': avg_loss,
             'val_f1_epoch': f1_epoch,

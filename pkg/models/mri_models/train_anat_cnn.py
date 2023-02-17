@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import math
 from pkg.models.pet_models.train_pet_cnn import ValidationLossTracker
-from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
 LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = ''
@@ -230,10 +230,10 @@ def train_anat(hparams, experiment_name='', experiment_version=None):
                             filename='epoch={epoch}-val_loss={val_loss_epoch:.3f}',
                             auto_insert_metric_name=False),
             ModelCheckpoint(monitor='val_f1_epoch',
-                        save_top_k=hparams['best_k_checkpoints'],
-                        mode='max',
-                        filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
-                        auto_insert_metric_name=False)
+                            save_top_k=hparams['best_k_checkpoints'],
+                            mode='max',
+                            filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
+                            auto_insert_metric_name=False)
         ]
     )
 
@@ -252,31 +252,31 @@ def optuna_optimization():
 
 if __name__ == '__main__':
     #####################
-    # Uncomment and comment the rest for optuna optimization
-    # optuna_optimization()
+    # Comment and uncomment the rest for training single run with specified hyperparameters.
+    optuna_optimization()
     #####################
 
     # Best checkpoint 2 class version 44
-    hparams = {
-        'early_stopping_patience': 30,
-        'max_epochs': 300,
-        'norm_mean_train': 413.6510,
-        'norm_std_train': 918.5371,
-        'norm_mean_val': 418.4120,
-        'norm_std_val': 830.2466,
-        'n_classes': 2,
-        'lr': 0.0002423919938002486,
-        'batch_size': 64,
-        'fl_gamma': 1,
-        'lr_pretrained': 1.522005844135047e-06,
-        'batchnorm_begin': True,
-        'batchnorm_dense': True,
-        'l2_reg': 0.001,
-        'linear_out': [],
-        'norm_percentile': 0.98,
-        'resnet_depth': 18,
-        'gpu_id': 6,
-        'reduce_factor_lr_schedule': 0.5
-    }
+    # hparams = {
+    #     'early_stopping_patience': 30,
+    #     'max_epochs': 300,
+    #     'norm_mean_train': 413.6510,
+    #     'norm_std_train': 918.5371,
+    #     'norm_mean_val': 418.4120,
+    #     'norm_std_val': 830.2466,
+    #     'n_classes': 2,
+    #     'lr': 0.0002423919938002486,
+    #     'batch_size': 64,
+    #     'fl_gamma': 1,
+    #     'lr_pretrained': 1.522005844135047e-06,
+    #     'batchnorm_begin': True,
+    #     'batchnorm_dense': True,
+    #     'l2_reg': 0.001,
+    #     'linear_out': [],
+    #     'norm_percentile': 0.98,
+    #     'resnet_depth': 18,
+    #     'gpu_id': 6,
+    #     'reduce_factor_lr_schedule': 0.5
+    # }
 
-    train_anat(hparams)
+    # train_anat(hparams)

@@ -1,20 +1,17 @@
 import os
 import torch
 import math
-from pathlib import Path
 from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, ToTensor, Normalize
-from pkg.models.pet_models.pet_cnn import Small_PET_CNN, Random_Benchmark_All_CN
 import optuna
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import Callback, LearningRateMonitor, ModelCheckpoint
+from pkg.models.pet_models.pet_cnn import Small_PET_CNN
 from pkg.utils.dataloader import MultiModalDataset
 
 LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'optuna_two_class'
 EXPERIMENT_VERSION = None
-
 
 
 class ValidationLossTracker(Callback):
@@ -129,38 +126,31 @@ def train(hparams,
 
     # CALLBACKS
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
-    # checkpoint_callback = ModelCheckpoint(
-    # save_top_k=1,
-    # monitor="val_f1_epoch",
-    # mode="max",
-    # dirpath=experiment_name,
-    # filename="best-run-{epoch:02d}-{val_f1_epoch:.4f}",
-# )
 
     # TRANSFORMS
-    normalization_pet = {'mean': hparams['norm_mean'], 'std': hparams['norm_std']}
+    normalization_pet = {
+        'mean': hparams['norm_mean'],
+        'std': hparams['norm_std']
+    }
 
     assert hparams['n_classes'] == 2 or hparams['n_classes'] == 3
     if hparams['n_classes'] == 2:
-        binary_classification=True
+        binary_classification = True
     else:
-        binary_classification=False
+        binary_classification = False
 
     # DATASET AND DATALOADER
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
 
-    remove_mci = hparams["n_classes"] == 2
-    trainset = MultiModalDataset(path=trainpath, 
-                                modalities=['pet1451'],
-                                normalize_pet=normalization_pet,
-                                binary_classification=binary_classification)
+    trainset = MultiModalDataset(path=trainpath,
+                                 modalities=['pet1451'],
+                                 normalize_pet=normalization_pet,
+                                 binary_classification=binary_classification)
     valset = MultiModalDataset(path=valpath,
-                            modalities=['pet1451'],
-                            normalize_pet=normalization_pet,
-                            binary_classification=binary_classification)
-
-
+                               modalities=['pet1451'],
+                               normalize_pet=normalization_pet,
+                               binary_classification=binary_classification)
 
     trainloader = DataLoader(
         trainset,
@@ -177,7 +167,6 @@ def train(hparams,
     hparams['loss_class_weights'] = 1 - weight_normalized
     hparams['loss_class_weights_human_readable'] = hparams['loss_class_weights'].tolist()  # original hparam is a Tensor that isn't stored in human readable format
 
-    # model = Random_Benchmark(hparams=hparams)
     model = Small_PET_CNN(hparams=hparams)
 
     tb_logger = pl.loggers.TensorBoardLogger(
@@ -205,10 +194,10 @@ def train(hparams,
                             filename='epoch={epoch}-val_loss={val_loss_epoch:.3f}',
                             auto_insert_metric_name=False),
             ModelCheckpoint(monitor='val_f1_epoch',
-                        save_top_k=hparams['best_k_checkpoints'],
-                        mode='max',
-                        filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
-                        auto_insert_metric_name=False)
+                            save_top_k=hparams['best_k_checkpoints'],
+                            mode='max',
+                            filename='epoch={epoch}-val_f1={val_f1_epoch:.3f}',
+                            auto_insert_metric_name=False)
         ]
     )
 
@@ -223,77 +212,26 @@ def optuna_optimization():
 
 if __name__ == '__main__':
     #####################
-    # Uncomment and comment the rest for optuna optimization
-    # optuna_optimization()
+    # Comment and uncomment the rest for single run with specified hyperparameters
+    optuna_optimization()
     #####################
 
     # Experimental
     # hparams = {
-    #     'early_stopping_patience': 5,
-    #     'max_epochs': 20,
-    #     'norm_mean': 0.5145,
-    #     'norm_std': 0.5383
-    # }
-
-    # hparams['lr'] = 0.00006
-    # hparams['batch_size'] = 8
-    # hparams['conv_out'] = [8, 16, 32, 64]
-    # hparams['filter_size'] = [5, 5, 5, 3]  # More filters for more layers!
-    # hparams['batchnorm'] = True
-    # # hparams['dropout_conv_p'] = 0.1
-    # # hparams['dropout_dense_p'] = 0.5
-    # hparams['linear_out'] = 64
-    # hparams["n_classes"] = 2
-
-
-    # # Best two class:
-    # hparams = {
-    #     'early_stopping_patience': 10,
-    #     'max_epochs': 50,
+    #     'early_stopping_patience': 30,
+    #     'max_epochs': 300,
     #     'norm_mean': 0.5145,
     #     'norm_std': 0.5383,
-    #     'lr': 0.00075356,
+    #     'lr': 0.0009905814208136547,
     #     'batch_size': 64,
     #     'conv_out': [8, 16, 32, 64],
-    #     'filter_size': [3, 3, 3, 3],
+    #     'filter_size': [5, 5, 3, 3],
     #     'batchnorm': False,
     #     'n_classes': 2,
-    #     'linear_out': 64
+    #     'linear_out': 64,
+    #     'fl_gamma': 5,
+    #     'reduce_factor_lr_schedule': 0.5,
+    #     'best_k_checkpoints': 5
     # }
 
-    # Best two class with batchnorm
-    # hparams = {
-    #     'early_stopping_patience': 10,
-    #     'max_epochs': 50,
-    #     'norm_mean': 0.5145,
-    #     'norm_std': 0.5383,
-    #     'lr': 0.00075356,
-    #     'batch_size': 64,
-    #     'conv_out': [8, 16, 32, 64],
-    #     'filter_size': [3, 3, 3, 3],
-    #     'batchnorm': True,
-    #     'n_classes': 2,
-    #     'linear_out': 64
-    # }
-
-    # Best two class retrain # version 33
-    hparams = {
-        'early_stopping_patience': 30,
-        'max_epochs': 300,
-        'norm_mean': 0.5145,
-        'norm_std': 0.5383,
-        'lr': 0.0009905814208136547,
-        'batch_size': 64,
-        'conv_out': [8, 16, 32, 64],
-        'filter_size': [5, 5, 3, 3],
-        'batchnorm': False,
-        'n_classes': 2,
-        'linear_out': 64,
-        'fl_gamma': 5,
-        'reduce_factor_lr_schedule': 0.5,
-        'best_k_checkpoints': 5
-    }
-
-    train(hparams, experiment_name='testruns')
     # train(hparams)
-    # TODO rerun with MCI samples

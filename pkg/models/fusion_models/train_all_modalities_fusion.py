@@ -20,48 +20,18 @@ LOG_DIRECTORY = 'lightning_logs'
 EXPERIMENT_NAME = 'testruns'
 EXPERIMENT_VERSION = 'all_mods'
 
-# PATH_PET_MRI = Path.cwd() / 'lightning_logs/best_runs/...'
-# PATH_TAB_MRI = Path.cwd() / 'lightning_logs/best_runs/...'
-
-# PET and MRI stage 1 models paths for normalization
 # PET and MRI models
 PATH_PET_CNN_2_CLASS = '/data2/practical-wise2223/adni/adni_1/lightning_checkpoints/lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt'
 PATH_MRI_CNN_2_CLASS = '/data2/practical-wise2223/adni/adni_1/lightning_checkpoints/lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt'
 PATH_PET_CNN_3_CLASS = '/u/home/eisln/adlm_adni/lightning_logs/pet_3_class_retrain_best/v204/checkpoints/epoch=28-step=28.ckpt'
 PATH_MRI_CNN_3_CLASS = '/u/home/eisln/adlm_adni/lightning_logs/optuna_mri_3_class/version_48/checkpoints/epoch=32-step=32.ckpt'
-# # load checkpoints
-# MODEL_PET_2_CLASS = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN_2_CLASS)
-# MODEL_MRI_2_CLASS = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN_2_CLASS)
-# MODEL_PET_3_CLASS = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN_3_CLASS)
-# MODEL_MRI_3_CLASS = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN_3_CLASS)
-# PATH_PET_CNN = Path.cwd() / 'lightning_logs/best_runs/pet_2_class/checkpoints/epoch=112-step=112.ckpt'
-# PATH_MRI_CNN = Path.cwd() / 'lightning_logs/best_runs/mri_2_class/checkpoints/epoch=37-step=37.ckpt'
-# load checkpoints
-# MODEL_PET = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN)
-# MODEL_MRI = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN)
-
-# PET and MRI models
-
+# # load checkpoints for fusion models
 PATH_PET_MRI_2_CLASS = '/data2/practical-wise2223/adni/adni_1/lightning_checkpoints/lightning_logs/best_runs/2stage_pet_mri_2_class/checkpoints/epoch=26-step=26.ckpt'
 PATH_PET_TAB_2_CLASS = '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/lightning_logs/optuna_pet_tabular_fusion_two_class/version_11/checkpoints/epoch=42-step=42.ckpt'
 PATH_MRI_TAB_2_CLASS = '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/lightning_logs/tabular_mri_fusion_two_class/version_11/checkpoints/epoch=49-step=49.ckpt'
 PATH_PET_MRI_3_CLASS = '/u/home/eisln/adlm_adni/lightning_logs/best_pet_mri_3_class_unfrozen/v28/checkpoints/epoch=32-val_f1=0.685.ckpt'
 PATH_PET_TAB_3_CLASS = '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/lightning_logs/optuna_unfrozen_pet_tabular_fusion_two_class/version_30/checkpoints/epoch=11-val_f1=0.809.ckpt'
 PATH_MRI_TAB_3_CLASS = '/u/home/eisln/adlm_adni/lightning_logs/best_runs/2stage_tabular_mri_3_class/checkpoints/epoch=21-val_f1=0.528.ckpt'
-
-# MODEL_PET_MRI_2_CLASS = Anat_PET_CNN.load_from_checkpoint(PATH_PET_MRI_2_CLASS)
-# MODEL_PET_TAB_2_CLASS = ''
-# MODEL_MRI_TAB_2_CLASS = ''
-# MODEL_PET_MRI_3_CLASS = Anat_PET_CNN.load_from_checkpoint(PATH_PET_MRI_3_CLASS)
-# MODEL_PET_TAB_3_CLASS = ''
-# MODEL_MRI_TAB_3_CLASS = Tabular_MRT_Model.load_from_checkpoint(PATH_MRI_TAB_3_CLASS)
-# load checkpoints
-
-# MODEL_PET_2_CLASS = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN_2_CLASS)
-# MODEL_MRI_2_CLASS = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN_2_CLASS)
-# MODEL_PET_3_CLASS = Small_PET_CNN.load_from_checkpoint(PATH_PET_CNN_3_CLASS)
-# MODEL_MRI_3_CLASS = Anat_CNN.load_from_checkpoint(PATH_MRI_CNN_3_CLASS)
-
 
 def options_list_to_dict(options: list) -> tuple[list, dict]:
     """
@@ -269,27 +239,4 @@ def optuna_optimization():
 
 
 if __name__ == '__main__':
-    #####################
-    # Uncomment and comment the rest for optuna optimization
     optuna_optimization()
-    #####################
-
-    # # fine-tune best run (version 56)
-    # hparams = {
-    #     'early_stopping_patience': 30,
-    #     'max_epochs': 300,
-    #     'norm_mean_train': 413.6510,
-    #     'norm_std_train': 918.5371,
-    #     'norm_mean_val': 418.4120,
-    #     'norm_std_val': 830.2466,
-    #     'n_classes': 2,
-    #     'lr': 0.0008678312514285887,
-    #     'batch_size': 32,
-    #     'fl_gamma': 5,
-    #     'l2_reg': 0,
-    #     'path_anat_pet': '...',
-    #     'path_anat_tab': '...',
-    #     'reduce_factor_lr_schedule': 0.1
-    # }
-
-    # train(hparams, experiment_name='best_runs')

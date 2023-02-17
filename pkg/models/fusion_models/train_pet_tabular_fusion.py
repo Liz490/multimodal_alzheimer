@@ -228,36 +228,4 @@ def optuna_optimization():
 
 
 if __name__ == '__main__':
-    #####################
-    # Uncomment and comment the rest for optuna optimization
     optuna_optimization()
-    #####################
-
-    # fine-tune best run (version 56)
-    # hparams = {
-    #     'early_stopping_patience': 30,
-    #     'max_epochs': 300,
-    #     'simple_dim_red': True,
-    #     'norm_mean_train': 413.6510,
-    #     'norm_std_train': 918.5371,
-    #     'norm_mean_val': 418.4120,
-    #     'norm_std_val': 830.2466,
-    #     'n_classes': 3,
-    #     'lr': 0.0008678312514285887,
-    #     'batch_size': 32,
-    #     'ensemble_size': 4,
-    #     'fl_gamma': 5,
-    #     'l2_reg': 0,
-    #     'reduce_factor_lr_schedule': 0.1,
-    #     'lr_pretrained': 0.000001,
-    #     'best_k_checkpoints': 3
-    # }
-    #
-    # if hparams['n_classes'] == 2:
-    #     hparams['path_pet'] = PATH_PET_CNN_2_CLASS
-    # else:
-    #     hparams['path_pet'] = PATH_PET_CNN_3_CLASS
-    #
-    # train_pet_tabular(hparams,
-    #                experiment_name='train_runs',
-    #                experiment_version='2stage_pet_tabular_2_class')

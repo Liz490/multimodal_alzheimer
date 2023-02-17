@@ -34,8 +34,9 @@ def train_and_predict(val_path, train_path, storage_path, binary_classification,
     metrics.ConfusionMatrixDisplay.from_predictions(y_val, y_eval, cmap='Blues', colorbar=False,
                                                     display_labels=('NC_train', 'AD_train'))
     plt.show()
-    f1_score_val = metrics.f1_score(y_val, y_eval)
-    f1_score_train = metrics.f1_score(y_train, y_eval_train)
+
+    f1_score_val = metrics.f1_score(y_val, y_eval, average='macro')
+    f1_score_train = metrics.f1_score(y_train, y_eval_train, average='macro')
     print(f"validation F1-score: {f1_score_val}")
     print(f"training F1-score: {f1_score_train}")
 
@@ -62,14 +63,6 @@ def predict_batch(batch, classifier):
 
 
 def load_model(path, binary_classification = True, ensemble_size = 4):
-    """
-    loads model from directory
-        Args:
-            path: path to location where model is stored
-        Returns:
-            TabPFNlassifier with stored weights
-            shape of data it was trained with
-    """
     x_train, y_train = get_data(path, binary_classification=binary_classification)
     classifier = train(x_train, y_train, ensemble_size)
     return classifier, x_train.shape[0]
@@ -84,15 +77,23 @@ def get_avg_activation(activations, num_ensemble, training_size):
     output = torch.transpose(output, 0, 1).squeeze(dim=0)
     return output
 
+def calculate_statistics(classifier, path, binary_classification):
+    x_test, y_test = get_data(path, binary_classification=binary_classification)
+    y_eval, p_eval = classifier.predict(x_test, return_winning_probability=True)
+    f1_score_test = metrics.f1_score(y_test, y_eval, average='macro')
+
+    print(f'f1 score: {f1_score_test}')
+
+
 if __name__ == '__main__':
-    VAL_PATH = '/vol/chameleon/projects/adni/adni_1/val_path_data_labels.csv'
-    TRAIN_PATH = '/vol/chameleon/projects/adni/adni_1/train_path_data_labels.csv'
+    VAL_PATH = '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/data/val_path_data_labels.csv'
+    TRAIN_PATH = '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/data/train_path_data_labels.csv'
     STORAGE_PATH = '/vol/chameleon/projects/adni/adni_1/trained_models/tabular_baseline.pth'
-    # Example usage how to extract probabilities of TabPFN
-    # load classifier
-    #classifier = load_model(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True)
-    classifier = train_and_predict(VAL_PATH, TRAIN_PATH, STORAGE_PATH, True, 4)
+    test_path = '/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/data/test_path_data_labels.csv'
 
+    classifier = train_and_predict(VAL_PATH, TRAIN_PATH, STORAGE_PATH, binary_classification=True, ensemble_size=4)
+    classifier_3c = train_and_predict(VAL_PATH, TRAIN_PATH, STORAGE_PATH, binary_classification=False, ensemble_size=4)
 
-
+    calculate_statistics(classifier, test_path, True)
+    calculate_statistics(classifier_3c, test_path, False)
 

@@ -1,3 +1,7 @@
+'''
+In this file we create a csv to plot the distribution of the number of available image modalities 
+over all patients (only patients with image modalites are considered).
+'''
 import os 
 import glob
 import pandas as pd

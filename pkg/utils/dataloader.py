@@ -14,8 +14,8 @@ from typing import List, Dict, Any, Callable, Tuple
 
 pd.options.mode.chained_assignment = None
 
-# transforms
-# WATCH OUT THIS PERMUTES THE DIMENSIONS OF THE TENSOR
+
+# WATCH OUT: THIS PERMUTES THE DIMENSIONS OF THE TENSOR
 #to_tensor = ToTensor()
 
 class MultiModalDataset(Dataset):
@@ -436,15 +436,9 @@ def merge_two_dfs(df1: pd.Series, df2: pd.DataFrame) -> pd.DataFrame:
     return df2
 
 
-    def remove_mci(self):
-        self.ds = self.ds.loc[self.ds['label'] != 'MCI']
-
 if __name__ == "__main__":
     trainpath = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
     valpath = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
-
-    #trainpath= "/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/data/train_path_data_labels.csv"
-    #valpath = "/vol/chameleon/users/schmiere/Documents/Code /adlm_adni/data/val_path_data_labels.csv"
 
     # how to use for PET
     normalization_pet = {'mean': 0.5145, 'std': 0.5383}
@@ -452,8 +446,6 @@ if __name__ == "__main__":
     data_label_pet = trainset_pet[0]
     print(data_label_pet['pet1451'].shape)
     print(data_label_pet['label'])
-
-    #
 
     # how to use for MRI
     normalization_mri = {'per_scan_norm': 'min_max'}

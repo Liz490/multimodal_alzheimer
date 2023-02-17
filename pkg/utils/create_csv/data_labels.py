@@ -29,14 +29,6 @@ import sys
 import numpy as np
 from torch import threshold
 from typing import Tuple
-#######################################################################
-# TODO:
-#  1) maybe use other split! So far only tabular data of subjects that also have an
-#     image modality in data_bids_processed are considered
-#  
-#
-#
-#######################################################################
 
 # define helper functions
 def get_timedelta_from_string(timestring: str, 
@@ -102,6 +94,8 @@ def find_closest_timestamp(date: datetime,
 
 def get_diag(row: pd.Series) -> str:
     """
+    Adapted from Paul
+
     Convert the diagnosis used in the ADNI database to one of the three class labels used in the task.
         'DXCURREN' and 'DIAGNOSIS':
             1=CN, 2=MCI, 3=DEMENTIA
@@ -141,10 +135,6 @@ relevant_feats_tab = ['RID', 'EXAMDATE', 'Ventricles', 'Hippocampus', 'WholeBrai
 f_tab_data = pd.read_csv('/vol/chameleon/projects/adni/Adni_merged.csv', low_memory=False, usecols=relevant_feats_tab)
 f_tab_data['AGE'] = f_tab_data['AGE'] + f_tab_data['Years_bl']
 f_tab_data = f_tab_data.drop(columns='Years_bl')
-# TO CHECK:
-# print(f_tab_data.head(15))
-# # # print(f_tab_data['Years_bl'].isnull().values.any())
-# sys.exit()
 
 
 # convert EXAMDATE column to type timedelta
@@ -208,7 +198,6 @@ for mode in ['train', 'val', 'test']:
                         # a pandas series that contains the label
                         label = f_tab_adni_tau[filt]['DX']
                         # sometimes we get an empty dataframe because the id is not in the table
-                        # TODO check if we have a more complete table
                         try:
                             label = label.iloc[0]
                             session_timedelta = get_timedelta_from_string(session)

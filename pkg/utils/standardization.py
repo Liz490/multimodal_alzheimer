@@ -1,3 +1,6 @@
+'''
+Script to compute the z-score statistics over a dataset
+'''
 from dataloader import MultiModalDataset
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
@@ -5,13 +8,23 @@ import os
 import torch
 
 transform = Compose([ToTensor()])
+# we only use statistics of train set (also for validation and testing)
 path = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-#dataset = PETAV1451Dataset(path=path, transform=transform, balanced=False)  
 
-# path_anat_train = os.path.join(os.getcwd(), 'data/train_path_data_labels.csv')
-# path_anat_val = os.path.join(os.getcwd(), 'data/val_path_data_labels.csv')
-# MAKE SURE TO DISTINGUISH BETWEEN TRAIN, VAL AND TEST
+# CHANGE arguments modalities and binary_classification depending on the modality and task
+############
+# MRI
+# 2 targets
 trainset_mri = MultiModalDataset(path=path, modalities=['t1w'], normalize_mri=None, binary_classification=True)
+# 3 targets
+# trainset_mri = MultiModalDataset(path=path, modalities=['t1w'], normalize_mri=None, binary_classification=False)
+#############
+# PET
+# 2 targets
+# trainset_pet = MultiModalDataset(path=path, modalities=['pet1451'], normalize_mri=None, binary_classification=True)
+# 3 targets
+# trainset_pet = MultiModalDataset(path=path, modalities=['pet1451'], normalize_mri=None, binary_classification=False)
+#############
 
 class NormalizeDataset():
     def __init__(self):
@@ -28,10 +41,6 @@ class NormalizeDataset():
             print("Statistics are computed over all dimensions")
             for batch in loader:
                 x = batch['mri']
-                #print((x**2).shape)
-                # print(x)
-                # print(x.mean())
-                #break
                 mean_x += x.mean()
                 mean_x_squared += (x ** 2).mean()
         else:

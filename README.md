@@ -91,7 +91,7 @@ than them, create a new file in our repository and load the modules you need.
 Add to your ssh config (~/.ssh/config):
 ```
 Host adlm 
-  HostName 131.159.110.3 
+  HostName <SERVER_IP> 
   User <YOUR_USERNAME>
 ```
 
